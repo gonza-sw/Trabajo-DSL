@@ -1,5 +1,3 @@
-import { cloneQuery } from '../dsl/ast.js';
-
 const ROLE_ACCESS = Object.freeze({
   admin: Object.freeze({ sources: ['v_inventario', 'v_movimientos'], warehouseId: null }),
   operario: Object.freeze({ sources: ['v_inventario', 'v_movimientos'], warehouseId: 1 }),
@@ -23,7 +21,9 @@ export function canAccessSource(user, source) {
 export function applyRolePolicy(query, user) {
   const access = getRoleAccess(user);
   if (!access.sources.includes(query.source)) throw new AuthorizationError('FORBIDDEN', 'No tienes permiso para consultar esta fuente');
-  const result = cloneQuery(query);
+  // Keep this policy independent from the DSL module so API tests can use
+  // injected services before the DSL implementation is integrated.
+  const result = structuredClone(query);
   if (access.warehouseId === null) return result;
 
   const policy = {
