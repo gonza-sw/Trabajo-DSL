@@ -4,6 +4,7 @@ import { selectApi } from './mocks.js';
 import { requireSession, signOut, describeUser } from './session.js';
 import { setupNavigation } from './nav.js';
 import { initBuilder } from './builder.js';
+import { createDashboard } from './dashboard.js';
 
 export async function startApp(win, api) {
   const doc = win.document;
@@ -14,9 +15,11 @@ export async function startApp(win, api) {
 
   doc.getElementById('user-badge').textContent = describeUser(user);
   doc.getElementById('logout').addEventListener('click', () => signOut(api, { redirect: goto }));
-  setupNavigation(doc);
   const builder = await initBuilder(doc, api);
-  return { user, builder };
+  const dashboard = createDashboard({ doc, api, ChartCtor: win.Chart });
+  // los datos del dashboard se piden cada vez que se abre la vista
+  setupNavigation(doc, { onChange: (view) => { if (view === 'dashboard') dashboard.load(); } });
+  return { user, builder, dashboard };
 }
 
 if (typeof window !== 'undefined' && window.document?.getElementById('view-builder')) {
