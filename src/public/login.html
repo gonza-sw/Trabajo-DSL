@@ -1,2 +1,24 @@
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><title>SQL-INV</title></head><body><!-- Pendiente: integrante 3 --></body></html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SQL-INV · Ingreso</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="login-page">
+  <form id="login-form" class="card login-card" autocomplete="off" novalidate>
+    <h1>SQL-INV</h1>
+    <p class="muted">Consulta de inventario multi-almacén</p>
+    <label for="username">Usuario
+      <input id="username" name="username" required autocomplete="username">
+    </label>
+    <label for="password">Contraseña
+      <input id="password" name="password" type="password" required autocomplete="current-password">
+    </label>
+    <button id="login-submit" class="btn primary" type="submit">Ingresar</button>
+    <p id="login-error" class="error" role="alert" hidden></p>
+  </form>
+  <script type="module" src="/js/login.js"></script>
+</body>
+</html>
