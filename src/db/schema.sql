@@ -1,1 +1,60 @@
--- Pendiente de implementación — Integrante 2.
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS categorias (
+    id INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS productos (
+    id INTEGER PRIMARY KEY,
+    categoria_id INTEGER NOT NULL,
+    nombre TEXT NOT NULL,
+    precio REAL NOT NULL CHECK (precio >= 0),
+    stock_minimo INTEGER NOT NULL CHECK (stock_minimo >= 0),
+
+    FOREIGN KEY (categoria_id) REFERENCES categorias(id)
+);
+
+CREATE TABLE IF NOT EXISTS almacenes (
+    id INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL UNIQUE,
+    ciudad TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS inventario (
+    id INTEGER PRIMARY KEY,
+    producto_id INTEGER NOT NULL,
+    almacen_id INTEGER NOT NULL,
+    cantidad INTEGER NOT NULL DEFAULT 0 CHECK (cantidad >= 0),
+
+    FOREIGN KEY (producto_id) REFERENCES productos(id),
+    FOREIGN KEY (almacen_id) REFERENCES almacenes(id),
+
+    UNIQUE (producto_id, almacen_id)
+);
+
+CREATE TABLE IF NOT EXISTS movimientos (
+    id INTEGER PRIMARY KEY,
+    inventario_id INTEGER NOT NULL,
+    tipo TEXT NOT NULL CHECK (tipo IN ('ENTRADA', 'SALIDA')),
+    cantidad INTEGER NOT NULL CHECK (cantidad > 0),
+    fecha TEXT NOT NULL,
+
+    FOREIGN KEY (inventario_id) REFERENCES inventario(id)
+);
+
+CREATE TABLE IF NOT EXISTS usuarios (
+    id INTEGER PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    rol TEXT NOT NULL CHECK (rol IN ('admin', 'operario', 'consulta')),
+    almacen_id INTEGER,
+
+    FOREIGN KEY (almacen_id) REFERENCES almacenes(id),
+
+    CHECK (
+        (rol = 'admin' AND almacen_id IS NULL)
+        OR
+        (rol IN ('operario', 'consulta') AND almacen_id IS NOT NULL)
+    )
+);
