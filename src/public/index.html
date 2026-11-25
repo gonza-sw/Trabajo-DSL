@@ -1,2 +1,55 @@
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><title>SQL-INV</title></head><body><!-- Pendiente: integrante 3 --></body></html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SQL-INV · Constructor de consultas</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <strong>SQL-INV</strong>
+    <nav class="nav" role="tablist" aria-label="Vistas">
+      <button class="nav-tab" role="tab" data-view="builder" aria-selected="true">Constructor</button>
+      <button class="nav-tab" role="tab" data-view="dashboard" aria-selected="false">Dashboard</button>
+    </nav>
+    <div class="who">
+      <span id="user-badge" class="badge"></span>
+      <button id="logout" class="btn small" type="button">Salir</button>
+    </div>
+  </header>
+
+  <main>
+    <p id="app-error" class="error" role="alert" hidden></p>
+
+    <!-- Vista 1: constructor visual -->
+    <section id="view-builder" data-view-panel="builder">
+      <div class="layout">
+        <div>
+          <div class="card">
+            <h2>1 · Fuente y campos</h2>
+            <label for="source">Fuente de datos
+              <select id="source"></select>
+            </label>
+            <div id="field-list" class="field-list" aria-label="Campos disponibles"></div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <h2>Resultado</h2>
+            <div id="result"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Vista 2: dashboard -->
+    <section id="view-dashboard" data-view-panel="dashboard" hidden>
+      <div class="charts">
+        <div class="card"><h2>Stock por almacén</h2><div class="chart-box"><canvas id="chart-warehouse"></canvas></div></div>
+        <div class="card"><h2>Distribución por categoría</h2><div class="chart-box"><canvas id="chart-category"></canvas></div></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
