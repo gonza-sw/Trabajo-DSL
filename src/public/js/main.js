@@ -3,6 +3,7 @@ import { createApi } from './api.js';
 import { selectApi } from './mocks.js';
 import { requireSession, signOut, describeUser } from './session.js';
 import { setupNavigation } from './nav.js';
+import { initBuilder } from './builder.js';
 
 export async function startApp(win, api) {
   const doc = win.document;
@@ -14,7 +15,8 @@ export async function startApp(win, api) {
   doc.getElementById('user-badge').textContent = describeUser(user);
   doc.getElementById('logout').addEventListener('click', () => signOut(api, { redirect: goto }));
   setupNavigation(doc);
-  return { user };
+  const builder = await initBuilder(doc, api);
+  return { user, builder };
 }
 
 if (typeof window !== 'undefined' && window.document?.getElementById('view-builder')) {
