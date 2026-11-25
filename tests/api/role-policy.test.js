@@ -15,7 +15,9 @@ describe('políticas por rol', () => {
 
   it('limita consulta a inventario y almacén Arequipa', () => {
     const scoped = applyRolePolicy(query, { rol: 'consulta' });
-    expect(scoped.where.conditions[0].value).toBe(2);
+    expect(scoped.where.logic).toBe('AND');
+    expect(scoped.where.conditions[0]).toEqual(query.where);
+    expect(scoped.where.conditions[1]).toMatchObject({ field: 'almacen_id', value: 2, internal: true });
     expect(canAccessSource({ rol: 'consulta' }, 'v_inventario')).toBe(true);
     expect(canAccessSource({ rol: 'consulta' }, 'v_movimientos')).toBe(false);
   });
