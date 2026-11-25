@@ -10,7 +10,9 @@ const page = () => {
     <nav><button class="nav-tab" data-view="builder" aria-selected="true"></button>
          <button class="nav-tab" data-view="dashboard" aria-selected="false"></button></nav>
     <section data-view-panel="builder"></section><section data-view-panel="dashboard" hidden></section>
-    <select id="source"></select><div id="field-list"></div><div id="where"></div>`;
+    <select id="source"></select><div id="field-list"></div><div id="where"></div>
+    <div id="select-rows"></div><input type="checkbox" id="group-auto" checked><div id="group-manual"></div><p id="group-effective"></p>
+    <div id="having"></div><div id="order-rows"></div><button id="add-order"></button><pre id="json-preview"></pre>`;
 };
 const names = () => [...document.querySelectorAll('#field-list [data-field]')].map((i) => i.dataset.field);
 const checked = () => [...document.querySelectorAll('#field-list [data-field]')].filter((i) => i.checked).map((i) => i.dataset.field);

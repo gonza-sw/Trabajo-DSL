@@ -34,12 +34,32 @@
             <div id="field-list" class="field-list" aria-label="Campos disponibles"></div>
           </div>
           <div class="card">
-            <h2>2 · Filtros (WHERE)</h2>
+            <h2>2 · Proyección y agregaciones</h2>
+            <div id="select-rows"></div>
+          </div>
+          <div class="card">
+            <h2>3 · Filtros (WHERE)</h2>
             <p class="muted small">Grupos AND/OR anidados hasta 2 niveles.</p>
             <div id="where"></div>
           </div>
+          <div class="card">
+            <h2>4 · GROUP BY y HAVING</h2>
+            <label class="inline"><input type="checkbox" id="group-auto" checked> GROUP BY automático (campos no agregados)</label>
+            <div id="group-manual" class="field-list" hidden></div>
+            <p id="group-effective" class="muted small"></p>
+            <div id="having"></div>
+          </div>
+          <div class="card">
+            <h2>5 · ORDER BY</h2>
+            <div id="order-rows"></div>
+            <button id="add-order" class="btn small" type="button">+ orden</button>
+          </div>
         </div>
         <div>
+          <div class="card">
+            <h2>JSON de la consulta <span class="muted small">(lo que se envía a la API)</span></h2>
+            <pre id="json-preview" class="code"></pre>
+          </div>
           <div class="card">
             <h2>Resultado</h2>
             <div id="result"></div>

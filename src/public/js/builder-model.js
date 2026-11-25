@@ -16,7 +16,8 @@ export function createState(catalog) {
     source: first,
     select: [],        // [{ field, aggregate: null|'SUM'|..., alias: '' }]
     where: emptyGroup(),
-    groupBy: [],
+    groupAuto: true,   // GROUP BY = campos no agregados (si hay agregaciones)
+    groupBy: [],       // solo se usa cuando groupAuto es false
     having: null,
     orderBy: [],
   };
@@ -55,7 +56,8 @@ export function setSource(state, name) {
   };
   const projected = new Set();
   const select = state.select.filter((s) => keep(s.field));
-  select.forEach((s) => projected.add(s.aggregate ? (s.alias || s.field) : s.field));
+  // nombre de salida: alias propio, o el generado (sum_cantidad), o el campo
+  select.forEach((s) => projected.add(s.alias || (s.aggregate ? `${s.aggregate.toLowerCase()}_${s.field}` : s.field)));
   return {
     ...state,
     source: name,
