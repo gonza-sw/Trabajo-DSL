@@ -2,14 +2,9 @@
 // Funciona sobre cualquier documento (se usa tal cual en las pruebas con jsdom).
 
 export function showView(doc, name) {
-  const panels = doc.querySelectorAll('[data-view-panel]');
-  let found = false;
-  panels.forEach((p) => {
-    const match = p.dataset.viewPanel === name;
-    p.hidden = !match;
-    if (match) found = true;
-  });
-  if (!found) return false;
+  const panels = [...doc.querySelectorAll('[data-view-panel]')];
+  if (!panels.some((p) => p.dataset.viewPanel === name)) return false; // no tocar nada si no existe
+  panels.forEach((p) => { p.hidden = p.dataset.viewPanel !== name; });
   doc.querySelectorAll('.nav-tab').forEach((t) => {
     t.setAttribute('aria-selected', String(t.dataset.view === name));
   });
