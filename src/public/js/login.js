@@ -1,5 +1,4 @@
 import { createApi } from './api.js';
-import { selectApi } from './mocks.js';
 
 export function setupLogin(doc, api, { redirect } = {}) {
   const form = doc.getElementById('login-form');
@@ -30,6 +29,6 @@ export function setupLogin(doc, api, { redirect } = {}) {
 }
 
 if (typeof window !== 'undefined' && window.document?.getElementById('login-form')) {
-  const api = await selectApi(window, createApi);
-  setupLogin(document, api, { redirect: (url) => window.location.assign(url + window.location.search) });
+  const api = createApi();
+  setupLogin(document, api, { redirect: (url) => window.location.assign(url) });
 }
