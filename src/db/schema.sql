@@ -58,3 +58,36 @@ CREATE TABLE IF NOT EXISTS usuarios (
         (rol IN ('operario', 'consulta') AND almacen_id IS NOT NULL)
     )
 );
+
+CREATE VIEW IF NOT EXISTS v_inventario AS
+SELECT
+    p.id AS producto_id,
+    p.nombre AS producto,
+    c.nombre AS categoria,
+    a.id AS almacen_id,
+    a.nombre AS almacen,
+    a.ciudad AS ciudad,
+    i.cantidad AS cantidad,
+    p.precio AS precio,
+    p.stock_minimo AS stock_minimo
+FROM inventario i
+INNER JOIN productos p ON i.producto_id = p.id
+INNER JOIN categorias c ON p.categoria_id = c.id
+INNER JOIN almacenes a ON i.almacen_id = a.id;
+
+
+CREATE VIEW IF NOT EXISTS v_movimientos AS
+SELECT
+    m.id AS movimiento_id,
+    p.nombre AS producto,
+    c.nombre AS categoria,
+    a.id AS almacen_id,
+    a.nombre AS almacen,
+    m.tipo AS tipo,
+    m.cantidad AS cantidad,
+    m.fecha AS fecha
+FROM movimientos m
+INNER JOIN inventario i ON m.inventario_id = i.id
+INNER JOIN productos p ON i.producto_id = p.id
+INNER JOIN categorias c ON p.categoria_id = c.id
+INNER JOIN almacenes a ON i.almacen_id = a.id;
