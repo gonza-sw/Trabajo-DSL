@@ -12,7 +12,8 @@ const page = () => {
     <section data-view-panel="builder"></section><section data-view-panel="dashboard" hidden></section>
     <select id="source"></select><div id="field-list"></div><div id="where"></div>
     <div id="select-rows"></div><input type="checkbox" id="group-auto" checked><div id="group-manual"></div><p id="group-effective"></p>
-    <div id="having"></div><div id="order-rows"></div><button id="add-order"></button><pre id="json-preview"></pre>`;
+    <div id="having"></div><div id="order-rows"></div><button id="add-order"></button><pre id="json-preview"></pre>
+    <button id="run"></button><ul id="problems" hidden></ul><pre id="sql"></pre><code id="params"></code><div id="result"></div>`;
 };
 const names = () => [...document.querySelectorAll('#field-list [data-field]')].map((i) => i.dataset.field);
 const checked = () => [...document.querySelectorAll('#field-list [data-field]')].filter((i) => i.checked).map((i) => i.dataset.field);

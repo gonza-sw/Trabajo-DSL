@@ -61,8 +61,17 @@
             <pre id="json-preview" class="code"></pre>
           </div>
           <div class="card">
+            <button id="run" class="btn primary" type="button">▶ Ejecutar consulta</button>
+            <ul id="problems" class="error" hidden></ul>
+          </div>
+          <div class="card">
+            <h2>SQL generado <span class="muted small">(parametrizado)</span></h2>
+            <pre id="sql" class="code">—</pre>
+            <div class="small"><strong>Parámetros:</strong> <code id="params">[]</code></div>
+          </div>
+          <div class="card">
             <h2>Resultado</h2>
-            <div id="result"></div>
+            <div id="result"><p class="state">Arme una consulta y presione Ejecutar.</p></div>
           </div>
         </div>
       </div>

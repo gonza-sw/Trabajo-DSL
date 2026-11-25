@@ -7,7 +7,9 @@ import {
 import {
   AGGREGATES, aggregatesFor, addAggregate, setSelectAggregate, setAlias, removeSelect, outputNames,
   setGroupAuto, toggleGroupBy, effectiveGroupBy, setHaving, addOrder, updateOrder, removeOrder, serializeQuery,
+  validateState,
 } from './builder-query.js';
+import { renderLoading, renderError, renderResult, renderSql, renderProblems } from './results.js';
 
 export function el(doc, tag, attrs = {}, ...kids) {
   const n = doc.createElement(tag);
@@ -168,6 +170,34 @@ export async function initBuilder(doc, api) {
     renderPreview();
     builder.onChange?.(builder.state);
   }
+
+  // ── ejecución ──
+  let runId = 0;
+  async function run() {
+    const problems = validateState(builder.state);
+    renderProblems(doc, $('problems'), problems);
+    if (problems.length) return null;
+    const id = ++runId;                      // descarta respuestas de ejecuciones anteriores
+    const runBtn = $('run');
+    runBtn.disabled = true;
+    renderLoading(doc, $('result'));
+    try {
+      const result = await api.query(serializeQuery(builder.state));
+      if (id !== runId) return null;
+      renderSql(doc, $('sql'), $('params'), result);
+      renderResult(doc, $('result'), result);
+      builder.lastResult = result;
+      return result;
+    } catch (e) {
+      if (id !== runId) return null;
+      renderError(doc, $('result'), e);
+      return null;
+    } finally {
+      if (id === runId) runBtn.disabled = false;
+    }
+  }
+  builder.run = run;
+  $('run').addEventListener('click', run);
 
   sourceSelect.addEventListener('change', () => apply(setSource(builder.state, sourceSelect.value)));
   $('group-auto').addEventListener('change', (e) => apply(setGroupAuto(builder.state, e.target.checked)));
