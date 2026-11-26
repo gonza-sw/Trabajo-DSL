@@ -45,7 +45,7 @@ describe('Servicio de consultas', () => {
             params: []
         });
 
-        policy = vi.fn(ast => ast);
+        policy = vi.fn(query => structuredClone(query));
 
         service = new QueryService({
             adapter,
@@ -153,22 +153,33 @@ describe('Servicio de consultas', () => {
 
     it('debe compilar el AST autorizado', async () => {
 
-        const authorizedAST = {
-            ...buildAST(query),
+        const authorizedQuery = {
+            ...query,
             where: {
-                type: 'Condition',
-                field: 'almacen_id',
-                operator: '=',
-                value: 1
+                logic: 'AND',
+                conditions: [
+                    {
+                        field: 'almacen_id',
+                        operator: '=',
+                        value: 1,
+                        internal: true
+                    }
+                ],
+                internal: true
             }
         };
 
-        policy.mockReturnValue(authorizedAST);
+        policy.mockReturnValue(authorizedQuery);
 
         await service.execute(query, user);
 
+        expect(policy).toHaveBeenCalledWith(
+            query,
+            user
+        );
+
         expect(compiler).toHaveBeenCalledWith(
-            authorizedAST
+            buildAST(authorizedQuery)
         );
 
     });

@@ -20,9 +20,18 @@ export class QueryService {
 
         this.validateQuery(ast);
 
-        const authorizedAST = this.applyRolePolicy(ast, user);
+        const authorizedQuery = this.applyRolePolicy(
+            query,
+            user
+        );
 
-        const { sql, params } = this.compileQuery(authorizedAST);
+        const authorizedAST = this.buildAST(
+            authorizedQuery
+        );
+
+        const { sql, params } = this.compileQuery(
+            authorizedAST
+        );
 
         const { columns, rows } = await this.adapter.execute(
             sql,

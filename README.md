@@ -4,8 +4,8 @@ Aplicación de consulta de inventario que modela SQL como DSL: la interfaz const
 
 ## Requisitos
 
-- Node.js 24 LTS y npm
-- Docker (opcional, para ejecutar el contenedor)
+- Node.js 24 LTS y npm.
+- Docker (opcional, para ejecutar el contenedor y las pruebas de portabilidad con PostgreSQL).
 
 ## Instalación y configuración
 
@@ -14,7 +14,15 @@ npm ci
 cp .env.example .env
 ```
 
-Configura `SESSION_SECRET` en `.env` con un valor aleatorio de al menos 32 caracteres. No publiques el archivo `.env`. Al completar la integración del módulo de datos, inicializa los datos con `npm run seed`.
+Configura `SESSION_SECRET` en `.env` con un valor aleatorio de al menos 32 caracteres. No publiques el archivo `.env`.
+
+Inicializa la base de datos SQLite:
+
+```sh
+npm run seed
+```
+
+Este comando genera el esquema relacional, las vistas de consulta y un dataset de demostración de 5311 registros.
 
 ## Ejecución
 
@@ -24,7 +32,7 @@ npm start
 
 La API escucha en `http://localhost:3000`. Las rutas de autenticación son `/api/auth/login`, `/api/auth/logout` y `/api/auth/me`; el esquema, las consultas y el dashboard están en `/api/schema`, `/api/query` y `/api/dashboard`.
 
-La aplicación se construye con `createApp({ userRepository, queryService, dashboardService, schemaProvider, sessionSecret })`. La inyección permite probar la API con repositorios y servicios simulados. El arranque `src/server.js` debe recibir las implementaciones reales de los integrantes 1 y 2 antes de usarlo como demo funcional.
+La aplicación se construye con `createApp({ userRepository, queryService, dashboardService, schemaProvider, sessionSecret })`. La inyección permite probar la API con repositorios y servicios simulados. El arranque `src/server.js` debe recibir las implementaciones reales de los servicios antes de usarlo como demo funcional.
 
 ## Pruebas y CI
 
@@ -33,7 +41,35 @@ npm test
 npm run test:api
 ```
 
-GitHub Actions ejecuta `npm ci` y la suite disponible para los pull requests y pushes a `dev` y `main`. Las pruebas de API usan sesiones HTTP y dobles de servicios; las pruebas de DSL, datos y frontend corresponden a sus integrantes.
+GitHub Actions ejecuta `npm ci` y la suite disponible para los pull requests y pushes a `dev` y `main`. Las pruebas de API usan sesiones HTTP y dobles de servicios; las pruebas de DSL, datos y frontend corresponden a sus respectivos módulos.
+
+## Datos y portabilidad
+
+SQLite es el motor principal del sistema. El modelo de datos está compuesto por seis tablas relacionadas y dos vistas de consulta.
+
+| Tabla | Registros |
+| --- | ---: |
+| categorias | 5 |
+| productos | 200 |
+| almacenes | 3 |
+| inventario | 600 |
+| movimientos | 4500 |
+| usuarios | 3 |
+| **Total** | **5311** |
+
+Para inicializar los datos y ejecutar las pruebas del módulo:
+
+```sh
+npm run seed
+npm run test:db
+npx vitest run tests/integration/query-service.test.js
+```
+
+El proyecto también incorpora un adaptador PostgreSQL para demostrar la independencia del DSL respecto al motor de base de datos. Ambos adaptadores implementan un contrato común que permite ejecutar consultas parametrizadas sin modificar la lógica del servicio de consultas.
+
+Las pruebas que requieren PostgreSQL se omiten cuando la variable de entorno `POSTGRES_URL` no está configurada.
+
+Las instrucciones de configuración, inicialización, ejecución y las evidencias de equivalencia entre ambos motores se encuentran en la [documentación de portabilidad](docs/07-portabilidad.md).
 
 ## Contenedor
 
@@ -53,3 +89,4 @@ El contenedor ejecuta Node.js 24 como usuario sin privilegios. La API habilita c
 - [Metamodelo](docs/04-metamodelo.md)
 - [Requisitos del sistema](docs/05-requisitos.md)
 - [Guion de demostración](docs/06-guion-demo.md)
+- [Portabilidad del motor de datos](docs/07-portabilidad.md)

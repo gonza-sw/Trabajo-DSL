@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node src/server.js",
     "seed": "node src/db/seed.js",
+    "seed:postgres": "node src/db/seed-postgres.js",
     "test": "vitest run --passWithNoTests",
     "test:coverage": "vitest run --coverage",
     "test:dsl": "vitest run tests/dsl",
