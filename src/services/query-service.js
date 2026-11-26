@@ -1,1 +1,42 @@
-// Pendiente de implementación — Integrante 2.
+export class QueryService {
+
+    constructor({
+        adapter,
+        buildAST,
+        validateQuery,
+        applyRolePolicy,
+        compileQuery
+    }) {
+        this.adapter = adapter;
+        this.buildAST = buildAST;
+        this.validateQuery = validateQuery;
+        this.applyRolePolicy = applyRolePolicy;
+        this.compileQuery = compileQuery;
+    }
+
+    async execute(query, user) {
+
+        const ast = this.buildAST(query);
+
+        this.validateQuery(ast);
+
+        const authorizedAST = this.applyRolePolicy(ast, user);
+
+        const { sql, params } = this.compileQuery(authorizedAST);
+
+        const { columns, rows } = await this.adapter.execute(
+            sql,
+            params
+        );
+
+        return {
+            success: true,
+            sql,
+            params,
+            columns,
+            rows,
+            rowCount: rows.length
+        };
+    }
+
+}

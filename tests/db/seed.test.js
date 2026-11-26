@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import Database from 'better-sqlite3';
 import { seedDatabase } from '../../src/db/seed.js';
+import { verifyPassword } from '../../src/security/auth.js';
 
 describe('Esquema relacional y dataset de inventario', () => {
 
@@ -219,7 +220,7 @@ describe('Esquema relacional y dataset de inventario', () => {
 
         for (const usuario of usuarios) {
             expect(usuario.password_hash).toMatch(
-                /^[a-f0-9]{32}:[a-f0-9]{128}$/
+                /^scrypt:[a-f0-9]{32}:[a-f0-9]{128}$/
             );
         }
     });
@@ -273,6 +274,32 @@ describe('Esquema relacional y dataset de inventario', () => {
             ).toHaveLength(0);
         } finally {
             temporalDb.close();
+        }
+    });
+
+    it('debe generar contrasenas compatibles con la autenticacion', async () => {
+        const credenciales = [
+            ['admin', 'AdminDemo2026!'],
+            ['operario', 'OperarioDemo2026!'],
+            ['consulta', 'ConsultaDemo2026!']
+        ];
+
+        for (const [username, password] of credenciales) {
+            const usuario = db.prepare(`
+                SELECT password_hash
+                FROM usuarios
+                WHERE username = ?
+            `).get(username);
+
+            expect(usuario).toBeDefined();
+
+            expect(
+                await verifyPassword(password, usuario.password_hash)
+            ).toBe(true);
+
+            expect(
+                await verifyPassword('incorrecta', usuario.password_hash)
+            ).toBe(false);
         }
     });
 

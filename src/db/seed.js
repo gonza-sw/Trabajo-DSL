@@ -44,7 +44,7 @@ function generarHash(password) {
     const salt = randomBytes(16).toString('hex');
     const hash = scryptSync(password, salt, 64).toString('hex');
 
-    return `${salt}:${hash}`;
+    return `scrypt:${salt}:${hash}`;
 }
 
 export function seedDatabase(db) {
