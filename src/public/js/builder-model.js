@@ -84,7 +84,8 @@ export const isSelected = (state, field) => state.select.some((s) => s.field ===
 // Raíz = profundidad 0; un subgrupo dentro de la raíz = 1; dentro de ese = 2 (máximo).
 export const MAX_DEPTH = 2;
 const NUM_OPERATORS = ['=', '!=', '>', '>=', '<', '<='];
-const TEXT_OPERATORS = ['=', '!=', 'LIKE'];
+// En texto también se compara por orden (p. ej. rangos de fechas ISO); LIKE es exclusivo de texto.
+const TEXT_OPERATORS = ['=', '!=', '>', '>=', '<', '<=', 'LIKE'];
 
 export const operatorsFor = (type) => (isNumericType(type) ? NUM_OPERATORS : TEXT_OPERATORS);
 

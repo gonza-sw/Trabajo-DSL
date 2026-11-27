@@ -7,6 +7,7 @@ import {
 import {
   AGGREGATES, aggregatesFor, addAggregate, setSelectAggregate, setAlias, removeSelect, outputNames,
   setGroupAuto, toggleGroupBy, effectiveGroupBy, setHaving, addOrder, updateOrder, removeOrder, serializeQuery,
+  reconcileOrder, havingAggregatesFor,
   validateState,
 } from './builder-query.js';
 import { renderLoading, renderError, renderResult, renderSql, renderProblems } from './results.js';
@@ -30,9 +31,9 @@ export async function initBuilder(doc, api) {
   const $ = (id) => doc.getElementById(id);
   const sourceSelect = $('source');
 
-  const apply = (next) => { builder.state = next; render(); };
+  const apply = (next) => { builder.state = reconcileOrder(builder.state, next); render(); };
   // cambios de texto: se actualiza el estado sin re-render para no perder el foco
-  const applyQuiet = (next) => { builder.state = next; renderPreview(); builder.onChange?.(builder.state); };
+  const applyQuiet = (next) => { builder.state = reconcileOrder(builder.state, next); renderPreview(); builder.onChange?.(builder.state); };
 
   const btn = (label, role, onclick, cls = 'btn small') =>
     el(doc, 'button', { class: cls, type: 'button', 'data-role': role, onclick }, label);
@@ -77,6 +78,12 @@ export async function initBuilder(doc, api) {
     $('select-rows').replaceChildren(...rows);
   }
 
+  // ayuda sobre el formato esperado del valor
+  function valueHint(c) {
+    if (c.operator === 'LIKE') return '%texto%';
+    return c.field === 'fecha' ? 'AAAA-MM-DD' : 'valor';
+  }
+
   // ── WHERE: grupos AND/OR recursivos ──
   function conditionRow(c, path, index) {
     const type = fieldType(builder.state, c.field);
@@ -85,7 +92,7 @@ export async function initBuilder(doc, api) {
     field.addEventListener('change', () => apply(updateCondition(builder.state, path, index, { field: field.value })));
     const op = el(doc, 'select', { 'data-role': 'operator', 'aria-label': 'Operador' }, options(operatorsFor(type), c.operator));
     op.addEventListener('change', () => apply(updateCondition(builder.state, path, index, { operator: op.value })));
-    const value = el(doc, 'input', { 'data-role': 'value', 'aria-label': 'Valor', value: c.value ?? '', placeholder: 'valor' });
+    const value = el(doc, 'input', { 'data-role': 'value', 'aria-label': 'Valor', value: c.value ?? '', placeholder: valueHint(c) });
     value.addEventListener('input', () => applyQuiet(updateCondition(builder.state, path, index, { value: value.value })));
     return el(doc, 'div', { class: 'row' }, field, op, value,
       btn('✕', 'remove', () => apply(removeNode(builder.state, path, index)), 'btn small danger'));
@@ -130,7 +137,7 @@ export async function initBuilder(doc, api) {
       box.replaceChildren(btn('+ HAVING', 'add-having', () => apply(setHaving(builder.state, {}))));
       return;
     }
-    const agg = el(doc, 'select', { 'data-role': 'having-aggregate', 'aria-label': 'Agregación' }, options(aggregatesFor(fieldType(builder.state, h.field)), h.aggregate));
+    const agg = el(doc, 'select', { 'data-role': 'having-aggregate', 'aria-label': 'Agregación' }, options(havingAggregatesFor(fieldType(builder.state, h.field)), h.aggregate));
     agg.addEventListener('change', () => apply(setHaving(builder.state, { aggregate: agg.value })));
     const field = el(doc, 'select', { 'data-role': 'having-field', 'aria-label': 'Campo' },
       sourceFields(builder.state).map((f) => el(doc, 'option', { value: f.name, selected: f.name === h.field }, f.name)));
@@ -177,6 +184,7 @@ export async function initBuilder(doc, api) {
     const problems = validateState(builder.state);
     renderProblems(doc, $('problems'), problems);
     if (problems.length) return null;
+    renderSql(doc, $('sql'), $('params'), null); // el SQL visible debe corresponder a esta ejecución
     const id = ++runId;                      // descarta respuestas de ejecuciones anteriores
     const runBtn = $('run');
     runBtn.disabled = true;
