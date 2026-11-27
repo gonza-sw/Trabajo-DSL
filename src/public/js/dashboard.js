@@ -10,27 +10,35 @@ export function toSeries(items) {
   return { labels: clean.map((i) => i.label), values: clean.map((i) => Number(i.value)) };
 }
 
-export function barConfig(series, label = 'Unidades en stock') {
+// Colores de texto y rejilla tomados del tema (claro/oscuro) definido en styles.css.
+export function readTheme(doc) {
+  const css = doc.defaultView?.getComputedStyle(doc.documentElement);
+  const read = (name, fallback) => css?.getPropertyValue(name).trim() || fallback;
+  return { text: read('--text', '#1c2430'), grid: read('--border', '#d9dfe8') };
+}
+
+export function barConfig(series, theme = {}) {
+  const axis = { ticks: { color: theme.text }, grid: { color: theme.grid } };
   return {
     type: 'bar',
-    data: { labels: series.labels, datasets: [{ label, data: series.values, backgroundColor: PALETTE[0] }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+    data: { labels: series.labels, datasets: [{ label: 'Unidades en stock', data: series.values, backgroundColor: PALETTE[0] }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: axis, y: { ...axis, beginAtZero: true } } },
   };
 }
 
-export function doughnutConfig(series) {
+export function doughnutConfig(series, theme = {}) {
   return {
     type: 'doughnut',
     data: { labels: series.labels, datasets: [{ data: series.values, backgroundColor: series.labels.map((_, i) => PALETTE[i % PALETTE.length]) }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: theme.text } } } },
   };
 }
 
 export function createDashboard({ doc, api, ChartCtor }) {
   const charts = {};
   const slots = [
-    { key: 'stockByWarehouse', canvas: 'chart-warehouse', empty: 'empty-warehouse', config: (s) => barConfig(s) },
-    { key: 'stockByCategory', canvas: 'chart-category', empty: 'empty-category', config: (s) => doughnutConfig(s) },
+    { key: 'stockByWarehouse', canvas: 'chart-warehouse', empty: 'empty-warehouse', config: barConfig },
+    { key: 'stockByCategory', canvas: 'chart-category', empty: 'empty-category', config: doughnutConfig },
   ];
   const errorBox = () => doc.getElementById('dashboard-error');
 
@@ -53,6 +61,7 @@ export function createDashboard({ doc, api, ChartCtor }) {
       return null;
     }
     destroy();
+    const theme = readTheme(doc);
     for (const slot of slots) {
       const series = toSeries(data[slot.key]);
       const canvas = doc.getElementById(slot.canvas);
@@ -60,7 +69,7 @@ export function createDashboard({ doc, api, ChartCtor }) {
       const hasData = series.values.length > 0;
       empty.hidden = hasData;
       canvas.hidden = !hasData;
-      if (hasData) charts[slot.key] = new ChartCtor(canvas, slot.config(series));
+      if (hasData) charts[slot.key] = new ChartCtor(canvas, slot.config(series, theme));
     }
     return data;
   }

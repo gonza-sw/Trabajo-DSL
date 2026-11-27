@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { toSeries, barConfig, doughnutConfig, createDashboard } from '../../src/public/js/dashboard.js';
+import { toSeries, barConfig, doughnutConfig, createDashboard, readTheme } from '../../src/public/js/dashboard.js';
 import { ApiError } from '../../src/public/js/api.js';
 
 const page = () => {
@@ -81,6 +81,18 @@ describe('dashboard con la API', () => {
     expect(instances[2].config.data.labels).toEqual(['Lima']); // solo su almacén
     expect(instances[2].destroyed).toBe(false);
     expect(Object.keys(dash.charts)).toHaveLength(2);
+  });
+
+  it('los textos y la rejilla usan los colores del tema activo', async () => {
+    document.documentElement.style.setProperty('--text', '#e7edf5');
+    document.documentElement.style.setProperty('--border', '#2b3441');
+    expect(readTheme(document)).toEqual({ text: '#e7edf5', grid: '#2b3441' });
+    const { FakeChart, instances } = fakeChart();
+    await createDashboard({ doc: document, api: { dashboard: async () => admin }, ChartCtor: FakeChart }).load();
+    expect(instances[0].config.options.scales.y.ticks.color).toBe('#e7edf5');
+    expect(instances[0].config.options.scales.x.grid.color).toBe('#2b3441');
+    expect(instances[1].config.options.plugins.legend.labels.color).toBe('#e7edf5');
+    document.documentElement.removeAttribute('style');
   });
 
   it('series vacías: no se dibuja el gráfico y se muestra el mensaje', async () => {
