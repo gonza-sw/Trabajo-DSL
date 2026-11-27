@@ -1,1 +1,1 @@
-// Pendiente de implementación — Integrante 4.
+export { createAuthRouter } from '../security/auth.js';
