@@ -32,7 +32,7 @@ npm start
 
 La API escucha en `http://localhost:3000`. Las rutas de autenticación son `/api/auth/login`, `/api/auth/logout` y `/api/auth/me`; el esquema, las consultas y el dashboard están en `/api/schema`, `/api/query` y `/api/dashboard`.
 
-La aplicación se construye con `createApp({ userRepository, queryService, dashboardService, schemaProvider, sessionSecret })`. La inyección permite probar la API con repositorios y servicios simulados. El arranque `src/server.js` debe recibir las implementaciones reales de los servicios antes de usarlo como demo funcional.
+El comando `npm start` carga las variables definidas en `.env` si el archivo existe. También puedes definirlas en el entorno; estas tienen prioridad sobre los valores del archivo.
 
 ## Pruebas y CI
 
@@ -75,10 +75,14 @@ Las instrucciones de configuración, inicialización, ejecución y las evidencia
 
 ```sh
 docker build -t sql-inv .
-docker run --rm -p 3000:3000 -e SESSION_SECRET="$(openssl rand -base64 48)" sql-inv
+docker run --rm --name sql-inv-demo \
+  -p 127.0.0.1:3000:3000 \
+  -e NODE_ENV=development \
+  -e SESSION_SECRET="$(node -e 'console.log(require("node:crypto").randomBytes(48).toString("hex"))')" \
+  sql-inv
 ```
 
-El contenedor ejecuta Node.js 24 como usuario sin privilegios. La API habilita cookies `Secure` cuando `NODE_ENV=production`; detrás de HTTPS, el proxy debe configurarse según las instrucciones de despliegue de Express antes de publicar el servicio.
+La imagen crea su propia base SQLite de demostración durante la construcción. El contenedor se ejecuta como usuario sin privilegios. El comando anterior es para una demostración local por HTTP y publica el puerto solo en loopback. Para un despliegue público, usa HTTPS, mantén `NODE_ENV=production` para habilitar cookies `Secure`, configura el proxy de confianza según Express y usa un almacenamiento de sesiones apropiado.
 
 ## Documentación del proyecto
 
