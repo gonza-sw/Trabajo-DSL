@@ -93,3 +93,26 @@ describe('HAVING coherente con las reglas del DSL', () => {
     expect(s.having).toMatchObject({ field: 'cantidad', aggregate: 'SUM' });
   });
 });
+
+describe('filtros por rango en texto y fechas', () => {
+  beforeEach(page);
+
+  it('fecha admite comparaciones de orden y LIKE sigue siendo solo de texto', () => {
+    expect(M.operatorsFor('string')).toEqual(['=', '!=', '>', '>=', '<', '<=', 'LIKE']);
+    expect(M.operatorsFor('number')).not.toContain('LIKE');
+  });
+
+  it('arma un rango de fechas sobre movimientos y orienta el formato', async () => {
+    const b = await initBuilder(document, { schema: async () => ADMIN_CATALOG });
+    change($('#source'), 'v_movimientos');
+    $('[data-field="fecha"]').click();
+    $('[data-role="add-condition"]').click();
+    change($('[data-role="field"]'), 'fecha');
+    expect($('[data-role="value"]').placeholder).toBe('AAAA-MM-DD');
+    change($('[data-role="operator"]'), '>=');
+    change($('[data-role="value"]'), '2026-02-01', 'input');
+    expect(Q.serializeQuery(b.state).where.conditions[0]).toEqual({ field: 'fecha', operator: '>=', value: '2026-02-01' });
+    change($('[data-role="operator"]'), 'LIKE');
+    expect($('[data-role="value"]').placeholder).toBe('%texto%');
+  });
+});

@@ -78,6 +78,12 @@ export async function initBuilder(doc, api) {
     $('select-rows').replaceChildren(...rows);
   }
 
+  // ayuda sobre el formato esperado del valor
+  function valueHint(c) {
+    if (c.operator === 'LIKE') return '%texto%';
+    return c.field === 'fecha' ? 'AAAA-MM-DD' : 'valor';
+  }
+
   // ── WHERE: grupos AND/OR recursivos ──
   function conditionRow(c, path, index) {
     const type = fieldType(builder.state, c.field);
@@ -86,7 +92,7 @@ export async function initBuilder(doc, api) {
     field.addEventListener('change', () => apply(updateCondition(builder.state, path, index, { field: field.value })));
     const op = el(doc, 'select', { 'data-role': 'operator', 'aria-label': 'Operador' }, options(operatorsFor(type), c.operator));
     op.addEventListener('change', () => apply(updateCondition(builder.state, path, index, { operator: op.value })));
-    const value = el(doc, 'input', { 'data-role': 'value', 'aria-label': 'Valor', value: c.value ?? '', placeholder: 'valor' });
+    const value = el(doc, 'input', { 'data-role': 'value', 'aria-label': 'Valor', value: c.value ?? '', placeholder: valueHint(c) });
     value.addEventListener('input', () => applyQuiet(updateCondition(builder.state, path, index, { value: value.value })));
     return el(doc, 'div', { class: 'row' }, field, op, value,
       btn('✕', 'remove', () => apply(removeNode(builder.state, path, index)), 'btn small danger'));
