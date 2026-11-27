@@ -7,7 +7,7 @@ import {
 import {
   AGGREGATES, aggregatesFor, addAggregate, setSelectAggregate, setAlias, removeSelect, outputNames,
   setGroupAuto, toggleGroupBy, effectiveGroupBy, setHaving, addOrder, updateOrder, removeOrder, serializeQuery,
-  reconcileOrder,
+  reconcileOrder, havingAggregatesFor,
   validateState,
 } from './builder-query.js';
 import { renderLoading, renderError, renderResult, renderSql, renderProblems } from './results.js';
@@ -131,7 +131,7 @@ export async function initBuilder(doc, api) {
       box.replaceChildren(btn('+ HAVING', 'add-having', () => apply(setHaving(builder.state, {}))));
       return;
     }
-    const agg = el(doc, 'select', { 'data-role': 'having-aggregate', 'aria-label': 'Agregación' }, options(aggregatesFor(fieldType(builder.state, h.field)), h.aggregate));
+    const agg = el(doc, 'select', { 'data-role': 'having-aggregate', 'aria-label': 'Agregación' }, options(havingAggregatesFor(fieldType(builder.state, h.field)), h.aggregate));
     agg.addEventListener('change', () => apply(setHaving(builder.state, { aggregate: agg.value })));
     const field = el(doc, 'select', { 'data-role': 'having-field', 'aria-label': 'Campo' },
       sourceFields(builder.state).map((f) => el(doc, 'option', { value: f.name, selected: f.name === h.field }, f.name)));

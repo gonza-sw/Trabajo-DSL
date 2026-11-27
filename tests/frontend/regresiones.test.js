@@ -66,3 +66,30 @@ describe('ORDER BY coherente con las columnas', () => {
     expect($('[data-role="order-field"]').value).toBe('total');
   });
 });
+
+describe('HAVING coherente con las reglas del DSL', () => {
+  it('con HAVING y sin agregación en SELECT se genera el GROUP BY automático', () => {
+    const s = pipe(base(), (x) => M.toggleField(x, 'categoria'), (x) => Q.setHaving(x, { value: '100' }));
+    expect(Q.serializeQuery(s).groupBy).toEqual(['categoria']);
+    expect(Q.validateState(s)).toEqual([]);
+  });
+
+  it('en modo manual exige que las columnas no agregadas estén en GROUP BY', () => {
+    let s = pipe(base(), (x) => M.toggleField(x, 'categoria'), (x) => Q.setGroupAuto(x, false), (x) => Q.setHaving(x, { value: '1' }));
+    expect(Q.validateState(s).map((p) => p.code)).toEqual(expect.arrayContaining(['GROUP_MISMATCH', 'HAVING_NO_GROUP']));
+    s = Q.toggleGroupBy(s, 'categoria');
+    expect(Q.validateState(s)).toEqual([]);
+  });
+
+  it('sobre un campo de texto solo ofrece COUNT', () => {
+    expect(Q.havingAggregatesFor('string')).toEqual(['COUNT']);
+    expect(Q.havingAggregatesFor('number')).toContain('MIN');
+    const s = Q.setHaving(base(), { field: 'producto', aggregate: 'MIN' });
+    expect(s.having.aggregate).toBe('COUNT');
+  });
+
+  it('no propone MIN/MAX de texto aunque esté en el SELECT', () => {
+    const s = pipe(base(), (x) => Q.addAggregate(x, 'producto', 'MAX'), (x) => Q.setHaving(x, {}));
+    expect(s.having).toMatchObject({ field: 'cantidad', aggregate: 'SUM' });
+  });
+});

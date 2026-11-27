@@ -58,15 +58,20 @@ export function toggleGroupBy(state, field) {
 
 export function effectiveGroupBy(state) {
   if (!state.groupAuto) return state.groupBy;
-  if (!hasAggregate(state)) return [];
+  if (!hasAggregate(state) && !state.having) return []; // HAVING también vuelve agrupada la consulta
   return [...new Set(state.select.filter((s) => !s.aggregate).map((s) => s.field))];
 }
+
+// HAVING compara contra un número: sobre texto solo tiene sentido COUNT.
+export const havingAggregatesFor = (type) => (isNumericType(type) ? AGGREGATES : ['COUNT']);
 
 // Propuesta inicial de HAVING: la agregación que ya está en el SELECT; si no hay,
 // SUM del primer campo numérico que no sea un identificador.
 function defaultHaving(state) {
   const projected = state.select.find((s) => s.aggregate);
-  if (projected) return { aggregate: projected.aggregate, field: projected.field, operator: '>', value: '' };
+  if (projected && havingAggregatesFor(fieldType(state, projected.field)).includes(projected.aggregate)) {
+    return { aggregate: projected.aggregate, field: projected.field, operator: '>', value: '' };
+  }
   const fields = sourceFields(state);
   const numeric = fields.filter((f) => isNumericType(f.type));
   const measure = numeric.find((f) => !/(^|_)id$/.test(f.name)) ?? numeric[0] ?? fields[0];
@@ -80,7 +85,7 @@ export function setHaving(state, patch) {
   const next = { ...base, ...patch };
   const type = fieldType(state, next.field);
   if (type === null) return state;
-  if (!aggregatesFor(type).includes(next.aggregate)) next.aggregate = 'COUNT'; // p. ej. SUM sobre texto
+  if (!havingAggregatesFor(type).includes(next.aggregate)) next.aggregate = 'COUNT'; // p. ej. SUM o MIN sobre texto
   return { ...state, having: next };
 }
 
@@ -136,7 +141,7 @@ export function validateState(state) {
   });
   visit(state.where);
 
-  if (!state.groupAuto && (hasAggregate(state) || state.groupBy.length)) {
+  if (!state.groupAuto && (hasAggregate(state) || state.having || state.groupBy.length)) {
     for (const s of state.select) {
       if (!s.aggregate && !state.groupBy.includes(s.field)) add('GROUP_MISMATCH', `${s.field} debe estar en GROUP BY`);
     }
