@@ -1,6 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { buildAST } from "../../src/dsl/ast.js";
+import { buildAST, DSLError } from "../../src/dsl/ast.js";
 import { validateQuery } from "../../src/dsl/validator.js";
+
+function expectDslError(query, code) {
+  let thrownError;
+  try {
+    validateQuery(buildAST(query));
+  } catch (error) {
+    thrownError = error;
+  }
+  expect(thrownError).toBeInstanceOf(DSLError);
+  expect(thrownError.code).toBe(code);
+}
 
 describe("DSL AST y Validación (PR 1)", () => {
   const validContractQuery = {
@@ -46,6 +57,83 @@ describe("DSL AST y Validación (PR 1)", () => {
       select: [{ field: "username" }],
     });
     expect(() => validateQuery(ast)).toThrowError(/Fuente no autorizada/);
+  });
+
+  it("rechaza fuentes heredadas y fuentes que no son cadenas", () => {
+    for (const source of ["__proto__", "toString", 42]) {
+      expectDslError(
+        { source, select: [{ field: "producto" }] },
+        "INVALID_SOURCE",
+      );
+    }
+  });
+
+  it.each([
+    [
+      "SELECT heredado",
+      { source: "v_inventario", select: [{ field: "constructor" }] },
+    ],
+    [
+      "WHERE heredado",
+      {
+        source: "v_inventario",
+        select: [{ field: "producto" }],
+        where: { field: "toString", operator: "=", value: "x" },
+      },
+    ],
+    [
+      "GROUP BY heredado",
+      {
+        source: "v_inventario",
+        select: [{ field: "producto" }],
+        groupBy: ["constructor"],
+      },
+    ],
+    [
+      "HAVING heredado",
+      {
+        source: "v_inventario",
+        select: [{ field: "cantidad", aggregate: "SUM" }],
+        having: {
+          field: "constructor",
+          aggregate: "SUM",
+          operator: ">",
+          value: 1,
+        },
+      },
+    ],
+    ["SELECT no textual", { source: "v_inventario", select: [{ field: 12 }] }],
+    [
+      "WHERE no textual",
+      {
+        source: "v_inventario",
+        select: [{ field: "producto" }],
+        where: { field: 12, operator: "=", value: "x" },
+      },
+    ],
+    [
+      "GROUP BY no textual",
+      {
+        source: "v_inventario",
+        select: [{ field: "producto" }],
+        groupBy: [12],
+      },
+    ],
+    [
+      "HAVING no textual",
+      {
+        source: "v_inventario",
+        select: [{ field: "cantidad", aggregate: "SUM" }],
+        having: {
+          field: 12,
+          aggregate: "SUM",
+          operator: ">",
+          value: 1,
+        },
+      },
+    ],
+  ])("rechaza campos heredados o no textuales en %s", (_clause, query) => {
+    expectDslError(query, "INVALID_FIELD");
   });
 
   it("rechaza columna inexistente en la vista", () => {
@@ -145,6 +233,57 @@ describe("DSL AST y Validación (PR 1)", () => {
     });
     expect(() => validateQuery(badOrder)).toThrowError(
       /campos proyectados o alias/,
+    );
+  });
+
+  it("devuelve INVALID_GROUP_BY para groupBy nulo o de tipo incorrecto", () => {
+    for (const groupBy of [null, "categoria"]) {
+      expectDslError(
+        {
+          source: "v_inventario",
+          select: [{ field: "categoria" }],
+          groupBy,
+        },
+        "INVALID_GROUP_BY",
+      );
+    }
+  });
+
+  it("exige agrupar las proyecciones simples si hay GROUP BY o agregación", () => {
+    expectDslError(
+      {
+        source: "v_inventario",
+        select: [{ field: "categoria" }, { field: "producto" }],
+        groupBy: ["categoria"],
+      },
+      "INCOHERENT_GROUP_BY",
+    );
+  });
+
+  it("exige que HAVING tenga GROUP BY o una agregación seleccionada", () => {
+    expectDslError(
+      {
+        source: "v_inventario",
+        select: [{ field: "producto" }],
+        having: {
+          field: "cantidad",
+          aggregate: "SUM",
+          operator: ">",
+          value: 1,
+        },
+      },
+      "INVALID_HAVING",
+    );
+  });
+
+  it("rechaza ORDER BY por la columna base de una proyección agregada", () => {
+    expectDslError(
+      {
+        source: "v_inventario",
+        select: [{ field: "cantidad", aggregate: "SUM", alias: "total" }],
+        orderBy: [{ field: "cantidad", direction: "ASC" }],
+      },
+      "INVALID_ORDER_FIELD",
     );
   });
 });

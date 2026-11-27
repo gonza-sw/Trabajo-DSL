@@ -101,7 +101,12 @@ export function buildAST(rawQuery) {
       rawQuery.where === undefined || rawQuery.where === null
         ? null
         : normalizeConditionOrGroup(rawQuery.where),
-    groupBy: rawQuery.groupBy === undefined ? [] : [...rawQuery.groupBy],
+    groupBy:
+      rawQuery.groupBy === undefined
+        ? []
+        : Array.isArray(rawQuery.groupBy)
+          ? [...rawQuery.groupBy]
+          : rawQuery.groupBy,
     having: normalizeHaving(rawQuery.having),
     orderBy:
       rawQuery.orderBy === undefined

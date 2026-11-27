@@ -47,7 +47,10 @@ function validateCondition(cond, fieldsMap) {
     }
   }
 
-  if (!cond.field || !(cond.field in fieldsMap)) {
+  if (
+    typeof cond.field !== "string" ||
+    !Object.hasOwn(fieldsMap, cond.field)
+  ) {
     throw new DSLError(
       "INVALID_FIELD",
       `Columna no permitida: "${cond.field}".`,
@@ -139,7 +142,10 @@ export function validateQuery(ast) {
   }
 
   // 1. Validar fuente
-  if (!ast.source || !(ast.source in ALLOWED_SOURCES)) {
+  if (
+    typeof ast.source !== "string" ||
+    !Object.hasOwn(ALLOWED_SOURCES, ast.source)
+  ) {
     throw new DSLError(
       "INVALID_SOURCE",
       `Fuente no autorizada: "${ast.source}".`,
@@ -167,7 +173,10 @@ export function validateQuery(ast) {
         "Elemento de proyección inválido.",
       );
     }
-    if (!item.field || !(item.field in fieldsMap)) {
+    if (
+      typeof item.field !== "string" ||
+      !Object.hasOwn(fieldsMap, item.field)
+    ) {
       throw new DSLError(
         "INVALID_FIELD",
         `Columna no permitida en select: "${item.field}".`,
@@ -193,13 +202,13 @@ export function validateQuery(ast) {
       }
     } else {
       nonAggregatedFields.push(item.field);
+      projectedNames.add(item.field);
     }
 
     if (item.alias !== null) {
       validateAlias(item.alias, seenAliases);
       projectedNames.add(item.alias);
     }
-    projectedNames.add(item.field);
   }
 
   // 3. Validar WHERE
@@ -212,23 +221,11 @@ export function validateQuery(ast) {
     throw new DSLError("INVALID_GROUP_BY", "groupBy debe ser un arreglo.");
   }
   for (const field of ast.groupBy) {
-    if (!(field in fieldsMap)) {
+    if (typeof field !== "string" || !Object.hasOwn(fieldsMap, field)) {
       throw new DSLError(
         "INVALID_FIELD",
         `Columna no permitida en groupBy: "${field}".`,
       );
-    }
-  }
-
-  if (hasAggregations && nonAggregatedFields.length > 0) {
-    const groupSet = new Set(ast.groupBy);
-    for (const field of nonAggregatedFields) {
-      if (!groupSet.has(field)) {
-        throw new DSLError(
-          "INCOHERENT_GROUP_BY",
-          `El campo no agregado "${field}" debe incluirse en groupBy.`,
-        );
-      }
     }
   }
 
@@ -241,7 +238,7 @@ export function validateQuery(ast) {
       );
     }
     const { field, aggregate, operator, value } = ast.having;
-    if (!field || !(field in fieldsMap)) {
+    if (typeof field !== "string" || !Object.hasOwn(fieldsMap, field)) {
       throw new DSLError(
         "INVALID_FIELD",
         `Columna no permitida en having: "${field}".`,
@@ -273,6 +270,28 @@ export function validateQuery(ast) {
         "TYPE_MISMATCH",
         "El valor de comparación en having debe ser numérico.",
       );
+    }
+
+    if (ast.groupBy.length === 0 && !hasAggregations) {
+      throw new DSLError(
+        "INVALID_HAVING",
+        "HAVING requiere GROUP BY o una agregación en SELECT.",
+      );
+    }
+  }
+
+  if (
+    (hasAggregations || ast.groupBy.length > 0 || ast.having !== null) &&
+    nonAggregatedFields.length > 0
+  ) {
+    const groupSet = new Set(ast.groupBy);
+    for (const field of nonAggregatedFields) {
+      if (!groupSet.has(field)) {
+        throw new DSLError(
+          "INCOHERENT_GROUP_BY",
+          `El campo no agregado "${field}" debe incluirse en groupBy.`,
+        );
+      }
     }
   }
 
