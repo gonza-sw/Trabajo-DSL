@@ -116,3 +116,21 @@ describe('filtros por rango en texto y fechas', () => {
     expect($('[data-role="value"]').placeholder).toBe('%texto%');
   });
 });
+
+describe('el SQL visible corresponde a la última ejecución', () => {
+  beforeEach(page);
+
+  it('si la nueva consulta falla no queda el SQL de la anterior', async () => {
+    const query = vi.fn()
+      .mockResolvedValueOnce({ sql: 'SELECT producto FROM v_inventario WHERE (precio > ?)', params: [5], columns: ['producto'], rows: [], rowCount: 0 })
+      .mockRejectedValueOnce(new ApiError('INVALID_FIELD', 'Columna no permitida', 400));
+    await initBuilder(document, { schema: async () => ADMIN_CATALOG, query });
+    $('[data-field="producto"]').click();
+    $('#run').click(); await tick();
+    expect($('#sql').textContent).toContain('precio > ?');
+    $('#run').click(); await tick();
+    expect($('#result').textContent).toContain('[INVALID_FIELD]');
+    expect($('#sql').textContent).toBe('—');
+    expect($('#params').textContent).toBe('[]');
+  });
+});

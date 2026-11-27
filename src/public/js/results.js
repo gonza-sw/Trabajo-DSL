@@ -72,6 +72,6 @@ export function renderResult(doc, box, result) {
 }
 
 export function renderSql(doc, sqlBox, paramsBox, result) {
-  sqlBox.textContent = result?.sql ?? '';
+  sqlBox.textContent = result?.sql ?? '—'; // sin resultado vigente no se muestra SQL anterior
   paramsBox.textContent = JSON.stringify(result?.params ?? []);
 }

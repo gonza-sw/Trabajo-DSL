@@ -184,6 +184,7 @@ export async function initBuilder(doc, api) {
     const problems = validateState(builder.state);
     renderProblems(doc, $('problems'), problems);
     if (problems.length) return null;
+    renderSql(doc, $('sql'), $('params'), null); // el SQL visible debe corresponder a esta ejecución
     const id = ++runId;                      // descarta respuestas de ejecuciones anteriores
     const runBtn = $('run');
     runBtn.disabled = true;
