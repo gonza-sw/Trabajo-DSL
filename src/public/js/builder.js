@@ -7,6 +7,7 @@ import {
 import {
   AGGREGATES, aggregatesFor, addAggregate, setSelectAggregate, setAlias, removeSelect, outputNames,
   setGroupAuto, toggleGroupBy, effectiveGroupBy, setHaving, addOrder, updateOrder, removeOrder, serializeQuery,
+  reconcileOrder,
   validateState,
 } from './builder-query.js';
 import { renderLoading, renderError, renderResult, renderSql, renderProblems } from './results.js';
@@ -30,9 +31,9 @@ export async function initBuilder(doc, api) {
   const $ = (id) => doc.getElementById(id);
   const sourceSelect = $('source');
 
-  const apply = (next) => { builder.state = next; render(); };
+  const apply = (next) => { builder.state = reconcileOrder(builder.state, next); render(); };
   // cambios de texto: se actualiza el estado sin re-render para no perder el foco
-  const applyQuiet = (next) => { builder.state = next; renderPreview(); builder.onChange?.(builder.state); };
+  const applyQuiet = (next) => { builder.state = reconcileOrder(builder.state, next); renderPreview(); builder.onChange?.(builder.state); };
 
   const btn = (label, role, onclick, cls = 'btn small') =>
     el(doc, 'button', { class: cls, type: 'button', 'data-role': role, onclick }, label);

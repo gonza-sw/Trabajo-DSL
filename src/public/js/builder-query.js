@@ -84,6 +84,22 @@ export function setHaving(state, patch) {
   return { ...state, having: next };
 }
 
+// Mantiene el ORDER BY coherente cuando cambian las columnas: sigue el nuevo nombre si se
+// renombra una columna y descarta el orden si la columna deja de estar proyectada.
+export function reconcileOrder(prev, next) {
+  if (prev.select === next.select || !next.orderBy.length) return next;
+  const before = outputNames(prev);
+  const after = outputNames(next);
+  const sameColumns = before.length === after.length; // renombrado o cambio de agregación
+  const orderBy = [];
+  for (const o of next.orderBy) {
+    const i = before.indexOf(o.field);
+    if (sameColumns && i >= 0) orderBy.push({ ...o, field: after[i] });
+    else if (after.includes(o.field)) orderBy.push(o);
+  }
+  return { ...next, orderBy };
+}
+
 export function addOrder(state) {
   const first = outputNames(state)[0];
   if (!first) return state;

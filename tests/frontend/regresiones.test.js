@@ -29,3 +29,40 @@ describe('alias en columnas sin agregación', () => {
     expect(Q.serializeQuery(s).select).toEqual([{ field: 'producto' }]);
   });
 });
+
+describe('ORDER BY coherente con las columnas', () => {
+  beforeEach(page);
+
+  it('quitar una columna elimina el orden que la usaba', async () => {
+    const b = await initBuilder(document, { schema: async () => ADMIN_CATALOG });
+    $('[data-field="categoria"]').click();
+    $('#agg-fn').value = 'SUM'; $('#agg-field').value = 'cantidad'; $('[data-role="add-aggregate"]').click();
+    $('#add-order').click();
+    change($('[data-role="order-field"]'), 'sum_cantidad');
+    document.querySelectorAll('[data-role="remove-select"]')[1].click();
+    expect(b.state.orderBy).toEqual([]);
+    expect(Q.validateState(b.state)).toEqual([]);
+  });
+
+  it('desmarcar un campo conserva los órdenes de las demás columnas', async () => {
+    const b = await initBuilder(document, { schema: async () => ADMIN_CATALOG });
+    $('[data-field="producto"]').click(); $('[data-field="precio"]').click();
+    $('#add-order').click(); $('#add-order').click();
+    change(document.querySelectorAll('[data-role="order-field"]')[1], 'precio');
+    $('[data-field="producto"]').click();
+    expect(b.state.orderBy).toEqual([{ field: 'precio', direction: 'ASC' }]);
+  });
+
+  it('renombrar el alias actualiza el ORDER BY mientras se escribe', async () => {
+    const b = await initBuilder(document, { schema: async () => ADMIN_CATALOG });
+    $('[data-field="categoria"]').click();
+    $('#agg-fn').value = 'SUM'; $('#agg-field').value = 'cantidad'; $('[data-role="add-aggregate"]').click();
+    $('#add-order').click();
+    change($('[data-role="order-field"]'), 'sum_cantidad');
+    const alias = document.querySelectorAll('[data-role="alias"]')[1];
+    for (const typed of ['t', 'to', 'total']) change(alias, typed, 'input');
+    expect(b.state.orderBy).toEqual([{ field: 'total', direction: 'ASC' }]);
+    alias.dispatchEvent(new Event('change'));
+    expect($('[data-role="order-field"]').value).toBe('total');
+  });
+});
