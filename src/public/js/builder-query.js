@@ -150,9 +150,11 @@ function serializeGroup(state, group) {
 
 export function serializeQuery(state) {
   const names = outputNames(state);
-  const select = state.select.map((s, i) => (s.aggregate
-    ? { field: s.field, aggregate: s.aggregate, alias: names[i] }
-    : { field: s.field }));
+  const select = state.select.map((s, i) => {
+    if (s.aggregate) return { field: s.field, aggregate: s.aggregate, alias: names[i] };
+    // sin agregación, el alias se envía solo si renombra la columna (ORDER BY puede usarlo)
+    return names[i] === s.field ? { field: s.field } : { field: s.field, alias: names[i] };
+  });
   const having = state.having
     ? { field: state.having.field, aggregate: state.having.aggregate, operator: state.having.operator, value: coerce('number', state.having.value) }
     : null;
