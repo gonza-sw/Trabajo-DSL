@@ -14,7 +14,7 @@ La interfaz visual permite construir consultas mediante la selección de campos,
 | **Actor principal** | Usuario autenticado (admin, operario o consulta) |
 | **Componentes involucrados** | Interfaz visual, API, DSL, políticas de acceso y servicios de consultas |
 | **Precondiciones** | 1) El usuario inició sesión con una cuenta predefinida. 2) La API proporciona mediante `/api/schema` las fuentes de datos autorizadas para su rol. |
-| **Postcondiciones** | 1) Si la consulta es válida, la pantalla muestra el SQL parametrizado, los parámetros y la tabla de resultados. 2) Si el servidor rechaza la consulta, se muestra el código y el mensaje de error sin presentar resultados de dicha ejecución. 3) Si la consulta no supera la validación local, se informa al usuario y no se envía la solicitud a la API. |
+| **Postcondiciones** | 1) Si la consulta es válida, la pantalla muestra el SQL parametrizado, los parámetros y la tabla de resultados. 2) Si el servidor rechaza la consulta, se muestra el código y el mensaje de error sin conservar los resultados anteriores. 3) Si la consulta no supera la validación local, se informa al usuario, se limpian los resultados anteriores y no se envía la solicitud a la API. |
 
 **Flujo principal**
 
@@ -22,16 +22,16 @@ La interfaz visual permite construir consultas mediante la selección de campos,
 2. Selecciona los campos que desea visualizar y, opcionalmente, incorpora funciones de agregación (SUM, COUNT, AVG, MIN, MAX) y alias.
 3. Define filtros mediante grupos AND/OR anidados hasta dos niveles de subgrupos.
 4. Establece el GROUP BY, de forma automática o manual, una condición HAVING y el ORDER BY sobre campos proyectados o alias.
-5. La interfaz presenta el JSON que se enviará y realiza las validaciones correspondientes.
-6. El usuario presiona "Ejecutar consulta".
+5. La interfaz presenta el JSON que se enviará a la API.
+6. El usuario presiona "Ejecutar consulta" y la interfaz realiza las validaciones correspondientes.
 7. La interfaz envía la solicitud mediante `POST /api/query` y muestra el estado de ejecución.
 8. El servidor valida la consulta, aplica las políticas de acceso, genera el SQL parametrizado y ejecuta la consulta.
 9. La interfaz presenta el SQL generado, los parámetros utilizados y la tabla de resultados.
 
 **Flujos alternos**
 
-- **5.a:** La consulta presenta problemas de configuración, como ausencia de campos seleccionados, filtros sin valor, alias inválidos o agrupaciones incoherentes. Se muestran los mensajes correspondientes y no se envía la solicitud a la API.
-- **8.a:** La API responde con un error 400 o 403. Se muestra el código y el mensaje de error en el panel de resultados.
+- **6.a:** La consulta presenta problemas de configuración, como ausencia de campos seleccionados, filtros sin valor, alias inválidos o agrupaciones incoherentes. Se muestran los mensajes correspondientes, se limpian el SQL, los parámetros y los resultados anteriores, y no se envía la solicitud a la API.
+- **8.a:** La API responde con un error 400 o 403. Se muestra el código y el mensaje de error en el panel de resultados, sin conservar los resultados anteriores.
 - **8.b:** La API responde con un error 401. La interfaz redirige al usuario a `login.html`.
 - **9.a:** La consulta no devuelve registros. Se conservan los encabezados de la tabla y se muestra el mensaje "La consulta no devolvió filas".
 
@@ -63,10 +63,19 @@ Scenario: Consulta avanzada con dos niveles de subgrupos
 
 ```gherkin
 Scenario: Consulta incompleta
-  Given que estoy en el constructor sin ningún campo seleccionado
-  When presiono "Ejecutar consulta"
+  Given que ejecuté una consulta válida y obtuve resultados
+  When retiro todos los campos seleccionados
+  And presiono "Ejecutar consulta"
   Then se muestra "Seleccione al menos un campo"
-  And no se llama a la API
+  And no se llama nuevamente a la API
+  And se limpian el SQL, los parámetros y la tabla de resultados anteriores
+
+Scenario: Recuperación después de una consulta incompleta
+  Given que la interfaz rechazó una consulta sin campos seleccionados
+  When selecciono nuevamente un campo válido
+  And presiono "Ejecutar consulta"
+  Then desaparece el mensaje de validación
+  And se muestran el SQL, los parámetros y los resultados de la nueva consulta
 
 Scenario: Fuente o campo no autorizado
   Given que la API rechaza la consulta con 403 FORBIDDEN
@@ -83,7 +92,7 @@ Scenario: Tratamiento de valores de entrada
 
 **Criterio de aceptación:** A03 (validación y seguridad de consultas).
 
-**Pruebas asociadas:** `results.test.js` e `integration-ui.test.js`.
+**Pruebas asociadas:** `results.test.js`, `integration-ui.test.js` y `regresiones.test.js`.
 
 ### HU-03: Consultar información según el rol de acceso
 
@@ -122,8 +131,9 @@ Scenario: Dashboard sin datos o con error
 - Cuando se utilizan agregaciones o condiciones HAVING, las columnas no agregadas deben formar parte del GROUP BY.
 - En las condiciones HAVING sobre campos de texto, la interfaz permite utilizar COUNT.
 - El ORDER BY se actualiza al modificar el alias de una columna y se elimina cuando se retira la columna asociada.
-- Cuando la API rechaza una consulta, se limpia el SQL anterior y se muestra el mensaje de error correspondiente.
-- Cuando una consulta no supera la validación local, no se envía la solicitud al servidor.
+- Cuando la API rechaza una consulta, se limpian el SQL, los parámetros y los resultados anteriores, y se muestra el mensaje de error correspondiente.
+- Cuando una consulta no supera la validación local, se muestran los mensajes correspondientes, se restablece el panel de resultados y no se envía la solicitud al servidor.
+- Las respuestas de ejecuciones anteriores se descartan cuando se inicia un nuevo intento de consulta, evitando que se presenten resultados obsoletos.
 - Los textos y valores recibidos desde el servidor se presentan mediante `textContent`, evitando su interpretación como código HTML.
 - La interfaz obtiene los datos de la API. Los datos simulados se utilizan exclusivamente en las pruebas automatizadas.
 
@@ -145,15 +155,15 @@ npm run test:frontend
 | `selection.test.js` | 14 |
 | `integration-ui.test.js` | 7 |
 | `results.test.js` | 13 |
-| `regresiones.test.js` | 11 |
-| **Total** | **92** |
+| `regresiones.test.js` | 12 |
+| **Total** | **93** |
 
 | Indicador | Resultado |
 | --- | ---: |
 | Archivos de pruebas aprobados | 7 |
-| Pruebas aprobadas | 92 |
+| Pruebas aprobadas | 93 |
 | Pruebas fallidas | 0 |
-| Cobertura de líneas de la interfaz | 95.58 % |
+| Cobertura de líneas de la interfaz | 95.66 % |
 
 Las pruebas comprenden las siguientes áreas:
 
@@ -164,9 +174,9 @@ Las pruebas comprenden las siguientes áreas:
 | Resultados | Presentación de tablas, resultados vacíos, estados de carga, errores HTTP y descarte de respuestas obsoletas. |
 | Dashboard | Generación de gráficos, actualización según la sesión, adaptación al tema visual y tratamiento de estados vacíos o errores. |
 | Integración de la interfaz | Autenticación, carga del esquema, ejecución de consultas, visualización del dashboard y cierre de sesión mediante solicitudes simuladas. |
-| Regresión | Alias de columnas, actualización de ORDER BY, generación automática de GROUP BY, condiciones HAVING, filtros por fechas y limpieza del SQL ante errores de la API. |
+| Regresión | Alias de columnas, actualización de ORDER BY, generación automática de GROUP BY, condiciones HAVING, filtros por fechas, limpieza de resultados ante errores de la API y consultas inválidas, y recuperación después de corregir una consulta incompleta. |
 
-La suite completa del proyecto obtuvo 202 pruebas aprobadas, distribuidas en 18 archivos de pruebas, sin fallos ni omisiones, con SQLite y PostgreSQL disponibles.
+La suite completa del proyecto obtuvo 203 pruebas aprobadas, distribuidas en 18 archivos de pruebas, sin fallos ni omisiones, con SQLite y PostgreSQL disponibles.
 
 Los resultados generales y las evidencias de cobertura se encuentran en la [validación final del proyecto](08-validacion-final.md).
 
@@ -196,7 +206,8 @@ Las comprobaciones permiten verificar los criterios de aceptación A01, A02 y A0
 | Modificación del alias de una columna | Actualización automática del alias utilizado en ORDER BY. |
 | Eliminación de una columna utilizada en ORDER BY | Eliminación automática de la condición de ordenamiento asociada. |
 | Consulta sin resultados | Se muestra "La consulta no devolvió filas". |
-| Consulta sin campos seleccionados | Se muestra "Seleccione al menos un campo" y no se llama a la API. |
+| Consulta sin campos seleccionados | Se muestra "Seleccione al menos un campo", se limpian el SQL, los parámetros y la tabla de resultados anteriores, y no se llama a la API. |
+| Recuperación después de una consulta inválida | Al seleccionar nuevamente un campo válido y ejecutar la consulta, desaparece el mensaje de validación y se presentan los nuevos resultados. |
 | Dashboard del administrador | Arequipa: 42131, Lima: 42217 y Trujillo: 46745 unidades, coincidentes con los datos almacenados. |
 | Operario consulta otros almacenes mediante OR | No se obtienen registros de almacenes no autorizados. |
 | Usuario consulta | Acceso exclusivo a `v_inventario` y estadísticas de Arequipa. |
@@ -209,6 +220,12 @@ Las comprobaciones permiten verificar los criterios de aceptación A01, A02 y A0
 Construcción y ejecución de una consulta avanzada, mostrando el SQL parametrizado y los resultados obtenidos.
 
 ![Constructor visual con consulta avanzada](images/ui-constructor-consulta-avanzada.jpg)
+
+**Validación de consultas incompletas**
+
+La interfaz impide la ejecución de consultas sin campos seleccionados, muestra el mensaje de validación y restablece el panel de resultados, evitando que se presente información correspondiente a una consulta anterior.
+
+![Validación de consulta sin campos seleccionados](images/validacion-consulta-invalida.png)
 
 **Dashboard del administrador**
 

@@ -208,10 +208,10 @@ Las pruebas de PostgreSQL requieren configurar `POSTGRES_URL` e inicializar prev
 | Indicador | Resultado |
 | --- | ---: |
 | Archivos de pruebas aprobados | 18 |
-| Pruebas aprobadas | 202 |
+| Pruebas aprobadas | 203 |
 | Pruebas fallidas | 0 |
 | Pruebas omitidas | 0 |
-| Cobertura de líneas | 91.75 % |
+| Cobertura de líneas | 91.83 % |
 
 Los resultados corresponden a la ejecución con SQLite y PostgreSQL disponibles y a los archivos incluidos en el reporte de cobertura.
 

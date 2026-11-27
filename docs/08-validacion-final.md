@@ -36,15 +36,15 @@ npm test
 | --- | ---: |
 | DSL | 25 |
 | Base de datos, adaptadores y servicios | 60 |
-| Interfaz de usuario | 92 |
+| Interfaz de usuario | 93 |
 | API y políticas de acceso | 11 |
 | Integración | 14 |
-| **Total** | **202** |
+| **Total** | **203** |
 
 | Indicador | Resultado |
 | --- | ---: |
 | Archivos de pruebas aprobados | 18 |
-| Pruebas aprobadas | 202 |
+| Pruebas aprobadas | 203 |
 | Pruebas fallidas | 0 |
 | Pruebas omitidas | 0 |
 
@@ -52,7 +52,9 @@ npm test
 
 Las pruebas comprenden tanto el comportamiento individual de los componentes como su integración, desde la construcción de la consulta hasta la obtención de resultados desde la base de datos.
 
-Se incluyen 11 pruebas de regresión de la interfaz, destinadas a verificar la gestión de alias, la actualización del ORDER BY, la coherencia de HAVING y GROUP BY, los filtros por fechas y la limpieza del SQL anterior cuando la API rechaza una consulta.
+Se incluyen 12 pruebas de regresión de la interfaz, destinadas a verificar la gestión de alias, la actualización del ORDER BY, la coherencia de HAVING y GROUP BY, los filtros por fechas y la limpieza de resultados anteriores cuando una consulta es rechazada por la API o no supera la validación local.
+
+También se verifica que el constructor permita ejecutar nuevamente una consulta después de corregir los problemas de configuración.
 
 ### 3.2. Cobertura de código
 
@@ -64,10 +66,10 @@ npm run test:coverage
 
 | Indicador | Cobertura |
 | --- | ---: |
-| Sentencias | 88.54 % |
+| Sentencias | 88.61 % |
 | Ramas | 81.64 % |
-| Funciones | 89.23 % |
-| Líneas | 91.75 % |
+| Funciones | 89.31 % |
+| Líneas | 91.83 % |
 
 La cobertura de líneas por componente fue la siguiente:
 
@@ -76,14 +78,14 @@ La cobertura de líneas por componente fue la siguiente:
 | Adaptadores | 97.05 % |
 | Base de datos | 82.43 % |
 | DSL | 83.53 % |
-| Interfaz de usuario | 95.58 % |
+| Interfaz de usuario | 95.66 % |
 | Rutas de la API | 76.19 % |
 | Seguridad | 98.27 % |
 | Servicios | 100.00 % |
 
 ![Cobertura final del proyecto](images/cobertura-final-proyecto.png)
 
-Los porcentajes corresponden a los archivos incluidos en el reporte de cobertura. Todos los componentes indicados superan el umbral del 60 % de cobertura de líneas establecido para el proyecto.
+Los porcentajes corresponden a los archivos incluidos en el reporte de cobertura. Todos los componentes indicados, considerados en conjunto, superan el umbral del 60 % de cobertura de líneas establecido para el proyecto.
 
 ## 4. Validación funcional
 
@@ -206,9 +208,25 @@ Las restricciones se aplican desde el servidor y no dependen exclusivamente de l
 
 ### 4.6. Validación de consultas incompletas
 
-Se verificó que el constructor valida los campos seleccionados antes de enviar una consulta al servidor.
+Se verificó que el constructor valida los campos seleccionados antes de enviar una consulta al servidor y mantiene la coherencia entre el estado de la consulta y los resultados presentados.
 
-Cuando no existen campos seleccionados, la interfaz muestra el mensaje "Seleccione al menos un campo" e impide el envío de la solicitud a la API.
+Para realizar esta comprobación, se ejecutó inicialmente una consulta válida sobre la vista `v_inventario`. Posteriormente, se retiraron todos los campos seleccionados y se intentó ejecutar nuevamente la consulta.
+
+| Comprobación | Resultado obtenido |
+| --- | --- |
+| Ejecutar una consulta válida | Se muestran el SQL, los parámetros y la tabla de resultados. |
+| Ejecutar una consulta sin campos seleccionados | Se muestra el mensaje "Seleccione al menos un campo". |
+| SQL generado anteriormente | Se elimina del panel de resultados. |
+| Parámetros anteriores | Se restablecen a una lista vacía `[]`. |
+| Tabla de resultados anterior | Se elimina y se restablece el estado inicial del panel. |
+| Envío de la consulta inválida | La validación local impide realizar una nueva solicitud a la API. |
+| Ejecución después de corregir la consulta | Se elimina el mensaje de validación y se presentan los nuevos resultados. |
+
+![Validación de una consulta sin campos seleccionados](images/validacion-consulta-invalida.png)
+
+El comportamiento fue comprobado desde la interfaz y mediante una prueba automatizada de regresión que verifica la limpieza de los resultados anteriores, el bloqueo de la solicitud inválida y la recuperación del constructor después de seleccionar nuevamente un campo válido.
+
+Esta validación evita que el usuario interprete resultados de una ejecución anterior como si correspondieran a una consulta que no ha sido ejecutada.
 
 ## 5. Validación del dashboard
 
@@ -255,7 +273,7 @@ Los procedimientos, resultados y evidencias específicas se encuentran en la [do
 
 ## 7. Validación de ejecución mediante Docker
 
-Se verificó la construcción de la imagen actualizada del aplicativo y su ejecución en un contenedor.
+Se verificó la construcción de la imagen del aplicativo y su ejecución en un contenedor.
 
 ```sh
 docker build -t sql-inv .
@@ -263,7 +281,7 @@ docker build -t sql-inv .
 
 La imagen incorpora las dependencias necesarias y genera el dataset SQLite durante su construcción, permitiendo ejecutar el aplicativo sin configurar una base de datos externa.
 
-Se comprobó que el contenedor utiliza la imagen recién construida y permite iniciar sesión y ejecutar una consulta básica de inventario con 600 registros.
+Durante la comprobación se verificó que el contenedor utilizaba la imagen recién construida y permitía iniciar sesión y ejecutar una consulta básica de inventario con 600 registros.
 
 ![Ejecución del aplicativo mediante Docker](images/ejecucion-docker.png)
 
@@ -273,9 +291,9 @@ El procedimiento completo de ejecución se encuentra en el [README del proyecto]
 
 Los resultados obtenidos permiten comprobar el funcionamiento integrado de SQL-INV y el cumplimiento de las principales funcionalidades definidas para el proyecto.
 
-La ejecución satisfactoria de las 202 pruebas automatizadas, la cobertura de líneas del 91.75 % y las verificaciones funcionales respaldan el comportamiento de los componentes evaluados.
+La ejecución satisfactoria de las 203 pruebas automatizadas, la cobertura de líneas del 91.83 % y las verificaciones funcionales respaldan el comportamiento de los componentes evaluados.
 
-Las comprobaciones realizadas sobre la interfaz verifican la construcción de consultas avanzadas, la gestión de alias, el ordenamiento, los filtros por fechas y la generación automática de agrupaciones.
+Las comprobaciones realizadas sobre la interfaz verifican la construcción de consultas avanzadas, la gestión de alias, el ordenamiento, los filtros por fechas, la generación automática de agrupaciones y el tratamiento de consultas incompletas sin conservar resultados de ejecuciones anteriores.
 
 La generación de consultas parametrizadas, las restricciones por rol y la equivalencia de resultados entre SQLite y PostgreSQL demuestran las capacidades del DSL y la separación entre la lógica de consultas y el motor de almacenamiento.
 
