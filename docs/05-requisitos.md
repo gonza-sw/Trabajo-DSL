@@ -1,38 +1,45 @@
-# Requisitos
+# 05 — Requisitos del sistema
 
-Documento del Integrante 3 (interfaz visual y dashboard). Contexto: una distribuidora de productos tecnológicos con almacenes en Lima, Arequipa y Trujillo necesita consultar existencias y movimientos sin pedir un reporte nuevo por cada pregunta. La interfaz permite armar la consulta con selecciones; el servidor la valida, la compila a SQL parametrizado y devuelve el resultado.
+SQL-INV permite consultar las existencias y los movimientos de inventario de una empresa distribuidora de productos tecnológicos con almacenes en Lima, Arequipa y Trujillo.
+
+La interfaz visual permite construir consultas mediante la selección de campos, condiciones, agrupaciones y criterios de ordenamiento. El servidor valida estas consultas, aplica las políticas de acceso correspondientes, genera el SQL parametrizado y devuelve los resultados.
 
 ## 1. Caso de uso principal
 
 ### UC-001: Construir y ejecutar una consulta de inventario
 
 | Campo | Descripción |
-|---|---|
+| --- | --- |
 | **ID** | UC-001 |
 | **Actor principal** | Usuario autenticado (admin, operario o consulta) |
-| **Actores secundarios** | API del sistema (validación, política de rol, ejecución) |
-| **Precondiciones** | 1) El usuario inició sesión con una cuenta predefinida. 2) La API responde `/api/schema` con las fuentes que su rol puede usar. |
-| **Postcondiciones** | 1) La pantalla muestra el SQL parametrizado, los parámetros y la tabla devuelta por la API. 2) Si la consulta fue rechazada, se muestra el código y el mensaje de error y no se muestran datos. 3) La interfaz nunca envía SQL ni la identidad del usuario: solo el JSON del contrato. |
+| **Componentes involucrados** | Interfaz visual, API, DSL, políticas de acceso y servicios de consultas |
+| **Precondiciones** | 1) El usuario inició sesión con una cuenta predefinida. 2) La API proporciona mediante `/api/schema` las fuentes de datos autorizadas para su rol. |
+| **Postcondiciones** | 1) Si la consulta es válida, la pantalla muestra el SQL parametrizado, los parámetros y la tabla de resultados. 2) Si el servidor rechaza la consulta, se muestra el código y el mensaje de error sin presentar resultados de dicha ejecución. 3) Si la consulta no supera la validación local, se informa al usuario y no se envía la solicitud a la API. |
 
 **Flujo principal**
-1. El usuario elige la fuente de datos (`v_inventario` o `v_movimientos`, según su rol).
-2. Marca los campos a mostrar y, si lo desea, agrega agregaciones (SUM, COUNT, AVG, MIN, MAX) con alias.
-3. Define filtros con grupos AND/OR anidados hasta 2 niveles.
-4. Define GROUP BY (automático o manual), una condición HAVING y el ORDER BY sobre campos proyectados o alias.
-5. La interfaz muestra el JSON exacto que se enviará y valida lo que puede validar en el cliente.
+
+1. El usuario selecciona una fuente de datos (`v_inventario` o `v_movimientos`), según su rol.
+2. Selecciona los campos que desea visualizar y, opcionalmente, incorpora funciones de agregación (SUM, COUNT, AVG, MIN, MAX) y alias.
+3. Define filtros mediante grupos AND/OR anidados hasta dos niveles de subgrupos.
+4. Establece el GROUP BY, de forma automática o manual, una condición HAVING y el ORDER BY sobre campos proyectados o alias.
+5. La interfaz presenta el JSON que se enviará y realiza las validaciones correspondientes.
 6. El usuario presiona "Ejecutar consulta".
-7. La interfaz envía `POST /api/query`, muestra "Ejecutando…" y luego el SQL, los parámetros y la tabla de resultados.
+7. La interfaz envía la solicitud mediante `POST /api/query` y muestra el estado de ejecución.
+8. El servidor valida la consulta, aplica las políticas de acceso, genera el SQL parametrizado y ejecuta la consulta.
+9. La interfaz presenta el SQL generado, los parámetros utilizados y la tabla de resultados.
 
 **Flujos alternos**
-- **5.a** La consulta tiene problemas visibles (sin campos, filtro sin valor, alias inválido, GROUP BY incoherente): se listan los problemas y no se llama a la API.
-- **7.a** La API responde 400/403: se muestra `[CODIGO] mensaje` en el panel de resultados.
-- **7.b** La API responde 401: la interfaz redirige a `login.html`.
-- **7.c** La consulta no devuelve filas: se conservan los encabezados y se muestra "La consulta no devolvió filas".
+
+- **5.a:** La consulta presenta problemas de configuración, como ausencia de campos seleccionados, filtros sin valor, alias inválidos o agrupaciones incoherentes. Se muestran los mensajes correspondientes y no se envía la solicitud a la API.
+- **7.a:** La API responde con un error 400 o 403. Se muestra el código y el mensaje de error en el panel de resultados.
+- **7.b:** La API responde con un error 401. La interfaz redirige al usuario a `login.html`.
+- **9.a:** La consulta no devuelve registros. Se conservan los encabezados de la tabla y se muestra el mensaje "La consulta no devolvió filas".
 
 ## 2. Historias de usuario (Given / When / Then)
 
-### HU-01: Armar una consulta avanzada
-**Como** analista de inventario **quiero** combinar filtros anidados, una agregación, HAVING y orden desde la pantalla **para** conocer el stock por categoría sin pedir un reporte nuevo.
+### HU-01: Construir una consulta avanzada
+
+**Como** analista de inventario, **quiero** combinar filtros anidados, funciones de agregación, HAVING y criterios de ordenamiento desde la interfaz, **para** conocer el stock por categoría sin solicitar un nuevo reporte.
 
 ```gherkin
 Scenario: Consulta avanzada con dos niveles de subgrupos
@@ -45,10 +52,14 @@ Scenario: Consulta avanzada con dos niveles de subgrupos
   Then la interfaz envía el JSON del contrato con GROUP BY ["categoria"]
   And muestra el SQL parametrizado, la lista de parámetros y la tabla devuelta por la API
 ```
-Criterios de aceptación: A01 y A02 (consulta simple y avanzada). Pruebas: `builder-query.test.js` ("reproduce exactamente el ejemplo del contrato…"), `results.test.js`, `integration-ui.test.js`.
 
-### HU-02: Rechazar una consulta inválida o no autorizada
-**Como** responsable de seguridad **quiero** que la interfaz no permita enviar consultas incompletas y que muestre con claridad los rechazos del servidor **para** evitar consultas ambiguas o acceso a datos no autorizados.
+**Criterios de aceptación:** A01 y A02 (consulta simple y avanzada).
+
+**Pruebas asociadas:** `builder-query.test.js`, `results.test.js` e `integration-ui.test.js`.
+
+### HU-02: Rechazar consultas inválidas o no autorizadas
+
+**Como** responsable de seguridad, **quiero** que la interfaz impida el envío de consultas incompletas y muestre claramente los rechazos del servidor, **para** evitar consultas ambiguas o accesos a datos no autorizados.
 
 ```gherkin
 Scenario: Consulta incompleta
@@ -63,15 +74,20 @@ Scenario: Fuente o campo no autorizado
   Then el panel de resultados muestra "[FORBIDDEN] No tienes permiso para consultar esta fuente"
   And no se muestra ninguna tabla
 
-Scenario: Valor con intento de inyección
-  Given que escribo  ' OR 1=1 --  como valor de un filtro de texto
+Scenario: Tratamiento de valores de entrada
+  Given que introduzco un valor de texto con caracteres especiales en un filtro
   When presiono "Ejecutar consulta"
-  Then el valor viaja como dato en el JSON y nunca como parte de un SQL armado en el navegador
+  Then el valor viaja como dato en el JSON
+  And el servidor lo incorpora como parámetro de la consulta SQL
 ```
-Criterio de aceptación: A03. Pruebas: `results.test.js` ("no llama a la API si la consulta no es válida…", "una consulta con filtro de texto envía el valor como dato…"), `integration-ui.test.js` (403).
 
-### HU-03: Ver solo lo que mi rol permite, también en el dashboard
-**Como** operario o usuario de consulta **quiero** que el catálogo y los gráficos reflejen solo mi alcance **para** no ver datos de otros almacenes ni fuentes restringidas.
+**Criterio de aceptación:** A03 (validación y seguridad de consultas).
+
+**Pruebas asociadas:** `results.test.js` e `integration-ui.test.js`.
+
+### HU-03: Consultar información según el rol de acceso
+
+**Como** operario o usuario de consulta, **quiero** que las fuentes de datos y los gráficos reflejen únicamente mi alcance autorizado, **para** consultar la información correspondiente a mi almacén.
 
 ```gherkin
 Scenario: Catálogo restringido
@@ -91,92 +107,121 @@ Scenario: Dashboard sin datos o con error
   When abro la vista Dashboard
   Then se muestra "Sin datos para mostrar" o el mensaje de error, sin gráficos antiguos
 ```
-Criterio de aceptación: A04. Pruebas: `selection.test.js` ("el rol consulta solo ve v_inventario"), `dashboard.test.js` ("cambio de sesión…", "series vacías…", "error de la API…").
+
+**Criterio de aceptación:** A04 (restricciones de acceso y visualización de estadísticas).
+
+**Pruebas asociadas:** `selection.test.js` y `dashboard.test.js`.
 
 ## 3. Reglas de la interfaz
 
-- La identidad (usuario, rol, almacén) viene siempre de la sesión del servidor; el JSON de consulta no la incluye.
-- El cliente nunca arma ni envía SQL; solo el JSON del contrato (`source`, `select`, `where`, `groupBy`, `having`, `orderBy`).
-- Profundidad máxima del filtro: raíz + 2 niveles de subgrupos.
-- SUM y AVG solo se ofrecen sobre campos numéricos; LIKE solo sobre texto. Las comparaciones de orden (`>`, `>=`, `<`, `<=`) se ofrecen también en texto, para rangos de fecha (`AAAA-MM-DD`).
-- Con agregaciones o HAVING, las columnas no agregadas forman parte del GROUP BY. En HAVING, sobre texto solo se ofrece COUNT.
-- El ORDER BY sigue a las columnas: se actualiza al renombrar un alias y se elimina si se quita la columna.
-- El SQL visible corresponde a la última ejecución; si una consulta falla no queda el anterior.
-- Todo texto que viene del servidor (nombres de campos, valores, errores, SQL) se inserta con `textContent`, nunca con `innerHTML`.
-- No hay datos simulados en el modo normal: los dobles de red viven solo en `tests/`.
+- La identidad del usuario, su rol y el almacén asignado se obtienen de la sesión del servidor y no se incluyen en el JSON de consulta.
+- El cliente no construye ni envía sentencias SQL directamente. Utiliza el contrato JSON compuesto por `source`, `select`, `where`, `groupBy`, `having` y `orderBy`.
+- Los filtros admiten una condición raíz y hasta dos niveles de subgrupos AND/OR.
+- Las funciones SUM y AVG solo se admiten sobre campos numéricos.
+- El operador LIKE se admite sobre campos de texto. Las comparaciones de orden (`>`, `>=`, `<`, `<=`) también se admiten sobre texto, permitiendo establecer rangos de fechas en formato ISO.
+- Cuando se utilizan agregaciones o condiciones HAVING, las columnas no agregadas deben formar parte del GROUP BY.
+- En las condiciones HAVING sobre campos de texto, la interfaz permite utilizar COUNT.
+- El ORDER BY se actualiza al modificar el alias de una columna y se elimina cuando se retira la columna asociada.
+- Cuando la API rechaza una consulta, se limpia el SQL anterior y se muestra el mensaje de error correspondiente.
+- Cuando una consulta no supera la validación local, no se envía la solicitud al servidor.
+- Los textos y valores recibidos desde el servidor se presentan mediante `textContent`, evitando su interpretación como código HTML.
+- La interfaz obtiene los datos de la API. Los datos simulados se utilizan exclusivamente en las pruebas automatizadas.
 
-## 4. Evidencias de ejecución
+## 4. Validación de requisitos
 
-### 4.1 Pruebas automáticas
+### 4.1. Pruebas automatizadas de la interfaz
 
-Comando: `npm run test:frontend` (Vitest + jsdom).
+Las pruebas de la interfaz se ejecutan mediante Vitest y jsdom.
 
-```
- api.test.js              14 pruebas
- builder-query.test.js    23 pruebas
- dashboard.test.js        10 pruebas
- selection.test.js        14 pruebas
- integration-ui.test.js    7 pruebas
- results.test.js          13 pruebas
- regresiones.test.js      11 pruebas
- Test Files  7 passed (7)
-      Tests  92 passed (92)
+```sh
+npm run test:frontend
 ```
 
-Suite completa del proyecto (`npm test`, con los módulos de los cuatro integrantes): 176 pruebas aprobadas y 13 omitidas (las de PostgreSQL, que requieren `POSTGRES_URL`).
+| Archivo de pruebas | Pruebas aprobadas |
+| --- | ---: |
+| `api.test.js` | 14 |
+| `builder-query.test.js` | 23 |
+| `dashboard.test.js` | 10 |
+| `selection.test.js` | 14 |
+| `integration-ui.test.js` | 7 |
+| `results.test.js` | 13 |
+| `regresiones.test.js` | 11 |
+| **Total** | **92** |
+
+| Indicador | Resultado |
+| --- | ---: |
+| Archivos de pruebas aprobados | 7 |
+| Pruebas aprobadas | 92 |
+| Pruebas fallidas | 0 |
+| Cobertura de líneas de la interfaz | 95.58 % |
+
+Las pruebas comprenden las siguientes áreas:
 
 | Área | Casos verificados |
-|---|---|
-| Selección | La fuente inicial es la primera del catálogo; cambiar de fuente conserva campos de igual nombre y tipo y limpia el resto; el rol consulta solo ve `v_inventario`; nombres de campo con HTML se muestran como texto. |
-| Constructor | JSON simple; reproducción exacta del ejemplo del contrato; números como número y texto como string; grupos vacíos descartados; profundidad 3 rechazada; SUM/AVG solo numéricos; GROUP BY automático y manual; HAVING (propone la agregación proyectada); ORDER BY solo sobre campos proyectados; alias inválidos o reservados. |
-| Resultados | Tabla con datos, sin filas, carga, error HTTP; datos con HTML como texto; descarte de respuestas obsoletas; botón deshabilitado durante la carga. |
-| Dashboard | Series correctas a partir de `[{label,value}]`; barras y dona; colores según el tema; cambio de sesión destruye y recrea los gráficos; estados vacío y de error; sin datos inventados. |
-| Interfaz completa | HTML real + cliente real con red simulada: sesión → esquema → consulta → dashboard; 401 redirige a login; salir; 403 y 500; `?mock=1` no activa nada. |
+| --- | --- |
+| Selección de fuentes y campos | Carga del catálogo, conservación de campos compatibles al cambiar de fuente, restricciones por rol y presentación segura de nombres de campos. |
+| Constructor de consultas | Generación del JSON, validación de tipos, filtros anidados, funciones de agregación, agrupaciones, HAVING, alias y criterios de ordenamiento. |
+| Resultados | Presentación de tablas, resultados vacíos, estados de carga, errores HTTP y descarte de respuestas obsoletas. |
+| Dashboard | Generación de gráficos, actualización según la sesión, adaptación al tema visual y tratamiento de estados vacíos o errores. |
+| Integración de la interfaz | Autenticación, carga del esquema, ejecución de consultas, visualización del dashboard y cierre de sesión mediante solicitudes simuladas. |
+| Regresión | Alias de columnas, actualización de ORDER BY, generación automática de GROUP BY, condiciones HAVING, filtros por fechas y limpieza del SQL ante errores de la API. |
 
-### 4.2 Verificación con la API y la base de datos reales
+La suite completa del proyecto obtuvo 202 pruebas aprobadas, distribuidas en 18 archivos de pruebas, sin fallos ni omisiones, con SQLite y PostgreSQL disponibles.
 
-Entorno: `npm run seed` (5311 registros) y `npm start` en local, con las tres cuentas de demostración.
+Los resultados generales y las evidencias de cobertura se encuentran en la [validación final del proyecto](08-validacion-final.md).
 
-| Cuenta | Comprobación en la interfaz | Resultado observado |
-|---|---|---|
-| admin | Consulta avanzada (2 niveles, HAVING, ORDER BY) | 5 filas; parámetros `[500,"Lima","Arequipa",0,100]` |
-| admin | Dashboard | 3 almacenes (Arequipa, Lima, Trujillo) y 5 categorías |
-| operario | Consulta de `almacen`, `almacen_id` | 200 filas; `WHERE (almacen_id = ?)` con `[1]` |
-| operario | Dashboard | Solo Lima |
-| consulta | Fuentes ofrecidas | Solo `v_inventario` |
-| consulta | Filtro con 2 niveles de subgrupos | 20 filas; filtro de almacén fuera del OR del usuario (`almacen_id = ?` con `2`) |
-| consulta | Dashboard | Solo Arequipa |
-| las tres | Cerrar sesión e ingresar con otra | El dashboard se vuelve a pedir y refleja el nuevo alcance |
+### 4.2. Verificación con la API y la base de datos
 
-Con esto se cubren los criterios A01, A02 y A04 desde la interfaz. A03 (consulta inválida) se verifica en las pruebas automáticas de la interfaz.
+La validación funcional se realizó utilizando el dataset de 5311 registros y las tres cuentas de demostración del sistema.
 
-### 4.3 Revisión de integración
+| Rol | Comprobación | Resultado observado |
+| --- | --- | --- |
+| admin | Consulta avanzada con filtros anidados, HAVING y ORDER BY | 5 filas; parámetros `[500,"Lima","Arequipa",0,100]`. |
+| admin | Dashboard | Estadísticas de los tres almacenes y las cinco categorías. |
+| operario | Consulta de `almacen` y `almacen_id` | 200 filas correspondientes a Lima; restricción `WHERE (almacen_id = ?)` con parámetro `[1]`. |
+| operario | Dashboard | Estadísticas correspondientes únicamente a Lima. |
+| consulta | Fuentes de datos disponibles | Solo se ofrece `v_inventario`. |
+| consulta | Filtro con dos niveles de subgrupos | 20 filas; la restricción del almacén de Arequipa se aplica fuera del grupo OR definido por el usuario. |
+| consulta | Dashboard | Estadísticas correspondientes únicamente a Arequipa. |
+| Todos | Cierre de sesión e ingreso con otra cuenta | El dashboard vuelve a solicitar los datos y refleja el nuevo alcance autorizado. |
 
-Segunda verificación contra la API real, comparando la interfaz con consultas directas a la base.
+Las comprobaciones permiten verificar los criterios de aceptación A01, A02 y A04 desde la interfaz. El criterio A03 se verifica mediante las pruebas automatizadas y las validaciones de consultas incompletas.
+
+### 4.3. Comprobaciones funcionales adicionales
 
 | Caso | Resultado observado |
-|---|---|
-| Rango de fechas en movimientos (`fecha >= 2026-06-01` y `< 2026-06-02`), orden por alias | 24 filas, igual que la consulta directa |
-| HAVING sin agregación en SELECT | `GROUP BY categoria HAVING SUM(cantidad) > ?`; 5 filas |
-| Consulta sin resultados | "La consulta no devolvió filas" |
-| Ejecutar sin campos | "Seleccione al menos un campo", sin llamar a la API |
-| Dashboard admin | Arequipa 42131, Lima 42217, Trujillo 46745, igual que la base |
-| operario pide otros almacenes con OR | 0 filas; el filtro de Lima queda fuera del OR |
-| consulta | Solo `v_inventario`; datos y dashboard de Arequipa |
-| Cerrar sesión | Regresa a `login.html` |
+| --- | --- |
+| Consulta de movimientos por rango de fechas | 24 filas correspondientes al 1 de junio de 2026, coincidentes con la consulta directa a la base de datos. |
+| HAVING sin agregación en SELECT | Generación automática de `GROUP BY categoria HAVING SUM(cantidad) > ?` y obtención de 5 filas. |
+| Modificación del alias de una columna | Actualización automática del alias utilizado en ORDER BY. |
+| Eliminación de una columna utilizada en ORDER BY | Eliminación automática de la condición de ordenamiento asociada. |
+| Consulta sin resultados | Se muestra "La consulta no devolvió filas". |
+| Consulta sin campos seleccionados | Se muestra "Seleccione al menos un campo" y no se llama a la API. |
+| Dashboard del administrador | Arequipa: 42131, Lima: 42217 y Trujillo: 46745 unidades, coincidentes con los datos almacenados. |
+| Operario consulta otros almacenes mediante OR | No se obtienen registros de almacenes no autorizados. |
+| Usuario consulta | Acceso exclusivo a `v_inventario` y estadísticas de Arequipa. |
+| Cierre de sesión | Redirección a `login.html`. |
 
-Problemas encontrados y corregidos: alias de columnas sin agregación no enviado; ORDER BY huérfano al quitar o renombrar columnas; HAVING bloqueado sin agregación en SELECT y ofreciendo MIN/MAX sobre texto; sin filtros de rango para fechas; SQL anterior visible tras un error.
+Como oportunidad de mejora, se identificó que una consulta rechazada durante la validación local puede mantener visibles los resultados de una ejecución anterior. Esta observación se detalla en la [validación final del proyecto](08-validacion-final.md).
 
-### 4.4 Capturas (datos reales)
+### 4.4. Evidencias de ejecución
 
-**Constructor: consulta avanzada con su SQL parametrizado y resultado (admin)**
+**Constructor de consultas**
+
+Construcción y ejecución de una consulta avanzada, mostrando el SQL parametrizado y los resultados obtenidos.
 
 ![Constructor visual con consulta avanzada](images/ui-constructor-consulta-avanzada.jpg)
 
-**Dashboard del rol admin**
+**Dashboard del administrador**
 
-![Dashboard admin](images/ui-dashboard-admin.jpg)
+Visualización de estadísticas correspondientes a todos los almacenes.
 
-**Dashboard del rol operario (solo Lima)**
+![Dashboard del administrador](images/ui-dashboard-admin.jpg)
 
-![Dashboard operario](images/ui-dashboard-operario.jpg)
+**Dashboard del operario**
+
+Visualización de estadísticas restringidas al almacén de Lima.
+
+![Dashboard del operario](images/ui-dashboard-operario.jpg)
+
+Las evidencias adicionales de consultas, restricciones de acceso, cobertura, portabilidad y ejecución mediante Docker se encuentran en la [validación final del proyecto](08-validacion-final.md).
