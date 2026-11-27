@@ -134,3 +134,34 @@ describe('el SQL visible corresponde a la última ejecución', () => {
     expect($('#params').textContent).toBe('[]');
   });
 });
+
+describe('una consulta bloqueada por la validación no deja resultados anteriores', () => {
+  beforeEach(page);
+
+  it('al quitar todos los campos y ejecutar se limpian SQL, parámetros y tabla', async () => {
+    const query = vi.fn().mockResolvedValue({
+      sql: 'SELECT producto FROM v_inventario WHERE (precio > ?)', params: [5],
+      columns: ['producto'], rows: [{ producto: 'Mouse' }], rowCount: 1,
+    });
+    const b = await initBuilder(document, { schema: async () => ADMIN_CATALOG, query });
+    $('[data-field="producto"]').click();
+    $('#run').click(); await tick();
+    expect($('#result table')).not.toBeNull();
+
+    $('[data-field="producto"]').click();   // se quitan todos los campos
+    $('#run').click(); await tick();
+
+    expect($('#problems').textContent).toContain('Seleccione al menos un campo');
+    expect($('#sql').textContent).toBe('—');
+    expect($('#params').textContent).toBe('[]');
+    expect($('#result table')).toBeNull();
+    expect($('#result').textContent).not.toContain('Mouse');
+    expect(b.lastResult).toBeUndefined();
+    expect(query).toHaveBeenCalledTimes(1);
+
+    $('[data-field="producto"]').click();   // al corregir, vuelve a funcionar
+    $('#run').click(); await tick();
+    expect($('#problems').hidden).toBe(true);
+    expect($('#result table')).not.toBeNull();
+  });
+});

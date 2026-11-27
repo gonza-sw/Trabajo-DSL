@@ -10,7 +10,7 @@ import {
   reconcileOrder, havingAggregatesFor,
   validateState,
 } from './builder-query.js';
-import { renderLoading, renderError, renderResult, renderSql, renderProblems } from './results.js';
+import { renderIdle, renderLoading, renderError, renderResult, renderSql, renderProblems } from './results.js';
 
 export function el(doc, tag, attrs = {}, ...kids) {
   const n = doc.createElement(tag);
@@ -180,13 +180,25 @@ export async function initBuilder(doc, api) {
 
   // ── ejecución ──
   let runId = 0;
+
+  // Quita todo lo que pertenezca a una ejecución anterior.
+  function clearResults() {
+    renderSql(doc, $('sql'), $('params'), null);
+    renderIdle(doc, $('result'));
+    delete builder.lastResult;
+  }
+
   async function run() {
     const problems = validateState(builder.state);
     renderProblems(doc, $('problems'), problems);
-    if (problems.length) return null;
-    renderSql(doc, $('sql'), $('params'), null); // el SQL visible debe corresponder a esta ejecución
     const id = ++runId;                      // descarta respuestas de ejecuciones anteriores
     const runBtn = $('run');
+    if (problems.length) {                   // no se envía: no deben quedar resultados anteriores
+      clearResults();
+      runBtn.disabled = false;
+      return null;
+    }
+    clearResults();                          // lo visible debe corresponder a esta ejecución
     runBtn.disabled = true;
     renderLoading(doc, $('result'));
     try {

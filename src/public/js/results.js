@@ -16,6 +16,12 @@ export function formatCell(value) {
   return String(value);
 }
 
+// Estado sin resultado vigente (por ejemplo, cuando la consulta no llega a enviarse).
+export function renderIdle(doc, box) {
+  box.removeAttribute('aria-busy');
+  box.replaceChildren(node(doc, 'p', 'state', 'Arme una consulta y presione Ejecutar.'));
+}
+
 export function renderLoading(doc, box) {
   box.replaceChildren(node(doc, 'div', 'state', 'Ejecutando consulta…'));
   box.setAttribute('aria-busy', 'true');
