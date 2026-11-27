@@ -179,6 +179,16 @@ describe('agregaciones, GROUP BY, HAVING y ORDER BY', () => {
     expect(validateState(s).map((p) => p.code)).toContain('HAVING_VALUE');
   });
 
+  it('HAVING propone la agregación ya proyectada', () => {
+    const s = pipe(base(), (x) => toggleField(x, 'categoria'), (x) => addAggregate(x, 'cantidad', 'AVG'), (x) => setHaving(x, {}));
+    expect(s.having).toMatchObject({ aggregate: 'AVG', field: 'cantidad' });
+  });
+
+  it('HAVING sin agregaciones evita proponer un identificador', () => {
+    const s = setHaving(base(), {});
+    expect(s.having).toMatchObject({ aggregate: 'SUM', field: 'cantidad' }); // no almacen_id
+  });
+
   it('HAVING con SUM sobre un campo de texto se corrige a COUNT', () => {
     const s = setHaving(base(), { field: 'producto', aggregate: 'SUM' });
     expect(s.having.aggregate).toBe('COUNT');
