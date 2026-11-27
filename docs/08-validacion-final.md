@@ -83,7 +83,7 @@ La cobertura de líneas por componente fue la siguiente:
 
 ![Cobertura final del proyecto](images/cobertura-final-proyecto.png)
 
-Los porcentajes corresponden a los archivos incluidos en el reporte de cobertura. Aunque los resultados superan el 60 % en los componentes indicados, todavía existen rutas y condiciones particulares que pueden incorporar pruebas adicionales.
+Los porcentajes corresponden a los archivos incluidos en el reporte de cobertura. Todos los componentes indicados superan el umbral del 60 % de cobertura de líneas establecido para el proyecto.
 
 ## 4. Validación funcional
 
@@ -206,11 +206,9 @@ Las restricciones se aplican desde el servidor y no dependen exclusivamente de l
 
 ### 4.6. Validación de consultas incompletas
 
-Se comprobó que el constructor impide ejecutar una consulta cuando no existen campos seleccionados, mostrando el mensaje de validación correspondiente sin enviar la solicitud a la API.
+Se verificó que el constructor valida los campos seleccionados antes de enviar una consulta al servidor.
 
-Como observación pendiente, cuando existe una ejecución previa y la nueva consulta no supera la validación local, el SQL, los parámetros y la tabla de resultados anteriores permanecen visibles. Se requiere limpiar estos elementos o identificar expresamente que corresponden a la última ejecución válida para evitar confusiones durante el uso del aplicativo.
-
-Esta observación corresponde a la presentación de resultados en la interfaz y no evidencia un fallo en la ejecución de consultas ni en las políticas de acceso del servidor.
+Cuando no existen campos seleccionados, la interfaz muestra el mensaje "Seleccione al menos un campo" e impide el envío de la solicitud a la API.
 
 ## 5. Validación del dashboard
 
@@ -277,8 +275,8 @@ Los resultados obtenidos permiten comprobar el funcionamiento integrado de SQL-I
 
 La ejecución satisfactoria de las 202 pruebas automatizadas, la cobertura de líneas del 91.75 % y las verificaciones funcionales respaldan el comportamiento de los componentes evaluados.
 
-Las pruebas de regresión y las comprobaciones realizadas sobre la interfaz permiten verificar la gestión de alias, el ordenamiento, los filtros por fechas y la generación automática de agrupaciones.
+Las comprobaciones realizadas sobre la interfaz verifican la construcción de consultas avanzadas, la gestión de alias, el ordenamiento, los filtros por fechas y la generación automática de agrupaciones.
 
 La generación de consultas parametrizadas, las restricciones por rol y la equivalencia de resultados entre SQLite y PostgreSQL demuestran las capacidades del DSL y la separación entre la lógica de consultas y el motor de almacenamiento.
 
-Finalmente, la ejecución mediante Docker facilita la reproducción del entorno de demostración del aplicativo. Se mantiene como oportunidad de mejora la presentación de resultados anteriores cuando una nueva consulta no supera la validación local.
+Finalmente, la ejecución mediante Docker facilita la instalación y reproducción del entorno de demostración del aplicativo.

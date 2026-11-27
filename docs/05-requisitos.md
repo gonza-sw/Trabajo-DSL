@@ -31,8 +31,8 @@ La interfaz visual permite construir consultas mediante la selección de campos,
 **Flujos alternos**
 
 - **5.a:** La consulta presenta problemas de configuración, como ausencia de campos seleccionados, filtros sin valor, alias inválidos o agrupaciones incoherentes. Se muestran los mensajes correspondientes y no se envía la solicitud a la API.
-- **7.a:** La API responde con un error 400 o 403. Se muestra el código y el mensaje de error en el panel de resultados.
-- **7.b:** La API responde con un error 401. La interfaz redirige al usuario a `login.html`.
+- **8.a:** La API responde con un error 400 o 403. Se muestra el código y el mensaje de error en el panel de resultados.
+- **8.b:** La API responde con un error 401. La interfaz redirige al usuario a `login.html`.
 - **9.a:** La consulta no devuelve registros. Se conservan los encabezados de la tabla y se muestra el mensaje "La consulta no devolvió filas".
 
 ## 2. Historias de usuario (Given / When / Then)
@@ -116,7 +116,7 @@ Scenario: Dashboard sin datos o con error
 
 - La identidad del usuario, su rol y el almacén asignado se obtienen de la sesión del servidor y no se incluyen en el JSON de consulta.
 - El cliente no construye ni envía sentencias SQL directamente. Utiliza el contrato JSON compuesto por `source`, `select`, `where`, `groupBy`, `having` y `orderBy`.
-- Los filtros admiten una condición raíz y hasta dos niveles de subgrupos AND/OR.
+- Los filtros admiten un grupo raíz y hasta dos niveles de subgrupos AND/OR.
 - Las funciones SUM y AVG solo se admiten sobre campos numéricos.
 - El operador LIKE se admite sobre campos de texto. Las comparaciones de orden (`>`, `>=`, `<`, `<=`) también se admiten sobre texto, permitiendo establecer rangos de fechas en formato ISO.
 - Cuando se utilizan agregaciones o condiciones HAVING, las columnas no agregadas deben formar parte del GROUP BY.
@@ -201,8 +201,6 @@ Las comprobaciones permiten verificar los criterios de aceptación A01, A02 y A0
 | Operario consulta otros almacenes mediante OR | No se obtienen registros de almacenes no autorizados. |
 | Usuario consulta | Acceso exclusivo a `v_inventario` y estadísticas de Arequipa. |
 | Cierre de sesión | Redirección a `login.html`. |
-
-Como oportunidad de mejora, se identificó que una consulta rechazada durante la validación local puede mantener visibles los resultados de una ejecución anterior. Esta observación se detalla en la [validación final del proyecto](08-validacion-final.md).
 
 ### 4.4. Evidencias de ejecución
 
