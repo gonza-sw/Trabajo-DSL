@@ -62,11 +62,21 @@ export function effectiveGroupBy(state) {
   return [...new Set(state.select.filter((s) => !s.aggregate).map((s) => s.field))];
 }
 
+// Propuesta inicial de HAVING: la agregación que ya está en el SELECT; si no hay,
+// SUM del primer campo numérico que no sea un identificador.
+function defaultHaving(state) {
+  const projected = state.select.find((s) => s.aggregate);
+  if (projected) return { aggregate: projected.aggregate, field: projected.field, operator: '>', value: '' };
+  const fields = sourceFields(state);
+  const numeric = fields.filter((f) => isNumericType(f.type));
+  const measure = numeric.find((f) => !/(^|_)id$/.test(f.name)) ?? numeric[0] ?? fields[0];
+  return { aggregate: 'SUM', field: measure?.name, operator: '>', value: '' };
+}
+
 // HAVING admite una sola condición agregada.
 export function setHaving(state, patch) {
   if (patch === null) return { ...state, having: null };
-  const numeric = sourceFields(state).find((f) => isNumericType(f.type));
-  const base = state.having ?? { aggregate: 'SUM', field: numeric?.name ?? sourceFields(state)[0]?.name, operator: '>', value: '' };
+  const base = state.having ?? defaultHaving(state);
   const next = { ...base, ...patch };
   const type = fieldType(state, next.field);
   if (type === null) return state;
