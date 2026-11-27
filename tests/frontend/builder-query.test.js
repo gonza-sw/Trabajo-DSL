@@ -173,7 +173,8 @@ describe('agregaciones, GROUP BY, HAVING y ORDER BY', () => {
   });
 
   it('HAVING requiere agregaciones o GROUP BY y un valor numérico', () => {
-    let s = pipe(base(), (x) => toggleField(x, 'producto'), (x) => setHaving(x, { value: '10' }));
+    // en modo manual y sin GROUP BY ni agregación, HAVING no es válido
+    let s = pipe(base(), (x) => toggleField(x, 'producto'), (x) => setGroupAuto(x, false), (x) => setHaving(x, { value: '10' }));
     expect(validateState(s).map((p) => p.code)).toContain('HAVING_NO_GROUP');
     s = pipe(base(), (x) => toggleField(x, 'categoria'), (x) => addAggregate(x, 'cantidad', 'SUM'), (x) => setHaving(x, { value: 'abc' }));
     expect(validateState(s).map((p) => p.code)).toContain('HAVING_VALUE');

@@ -98,7 +98,10 @@ Criterio de aceptación: A04. Pruebas: `selection.test.js` ("el rol consulta sol
 - La identidad (usuario, rol, almacén) viene siempre de la sesión del servidor; el JSON de consulta no la incluye.
 - El cliente nunca arma ni envía SQL; solo el JSON del contrato (`source`, `select`, `where`, `groupBy`, `having`, `orderBy`).
 - Profundidad máxima del filtro: raíz + 2 niveles de subgrupos.
-- SUM y AVG solo se ofrecen sobre campos numéricos; LIKE solo sobre texto.
+- SUM y AVG solo se ofrecen sobre campos numéricos; LIKE solo sobre texto. Las comparaciones de orden (`>`, `>=`, `<`, `<=`) se ofrecen también en texto, para rangos de fecha (`AAAA-MM-DD`).
+- Con agregaciones o HAVING, las columnas no agregadas forman parte del GROUP BY. En HAVING, sobre texto solo se ofrece COUNT.
+- El ORDER BY sigue a las columnas: se actualiza al renombrar un alias y se elimina si se quita la columna.
+- El SQL visible corresponde a la última ejecución; si una consulta falla no queda el anterior.
 - Todo texto que viene del servidor (nombres de campos, valores, errores, SQL) se inserta con `textContent`, nunca con `innerHTML`.
 - No hay datos simulados en el modo normal: los dobles de red viven solo en `tests/`.
 
@@ -115,11 +118,12 @@ Comando: `npm run test:frontend` (Vitest + jsdom).
  selection.test.js        14 pruebas
  integration-ui.test.js    7 pruebas
  results.test.js          13 pruebas
- Test Files  6 passed (6)
-      Tests  81 passed (81)
+ regresiones.test.js      11 pruebas
+ Test Files  7 passed (7)
+      Tests  92 passed (92)
 ```
 
-Suite completa del proyecto (`npm test`, con los módulos de los cuatro integrantes): 165 pruebas aprobadas y 13 omitidas (las de PostgreSQL, que requieren `POSTGRES_URL`).
+Suite completa del proyecto (`npm test`, con los módulos de los cuatro integrantes): 176 pruebas aprobadas y 13 omitidas (las de PostgreSQL, que requieren `POSTGRES_URL`).
 
 | Área | Casos verificados |
 |---|---|
@@ -146,7 +150,24 @@ Entorno: `npm run seed` (5311 registros) y `npm start` en local, con las tres cu
 
 Con esto se cubren los criterios A01, A02 y A04 desde la interfaz. A03 (consulta inválida) se verifica en las pruebas automáticas de la interfaz.
 
-### 4.3 Capturas (datos reales)
+### 4.3 Revisión de integración
+
+Segunda verificación contra la API real, comparando la interfaz con consultas directas a la base.
+
+| Caso | Resultado observado |
+|---|---|
+| Rango de fechas en movimientos (`fecha >= 2026-06-01` y `< 2026-06-02`), orden por alias | 24 filas, igual que la consulta directa |
+| HAVING sin agregación en SELECT | `GROUP BY categoria HAVING SUM(cantidad) > ?`; 5 filas |
+| Consulta sin resultados | "La consulta no devolvió filas" |
+| Ejecutar sin campos | "Seleccione al menos un campo", sin llamar a la API |
+| Dashboard admin | Arequipa 42131, Lima 42217, Trujillo 46745, igual que la base |
+| operario pide otros almacenes con OR | 0 filas; el filtro de Lima queda fuera del OR |
+| consulta | Solo `v_inventario`; datos y dashboard de Arequipa |
+| Cerrar sesión | Regresa a `login.html` |
+
+Problemas encontrados y corregidos: alias de columnas sin agregación no enviado; ORDER BY huérfano al quitar o renombrar columnas; HAVING bloqueado sin agregación en SELECT y ofreciendo MIN/MAX sobre texto; sin filtros de rango para fechas; SQL anterior visible tras un error.
+
+### 4.4 Capturas (datos reales)
 
 **Constructor: consulta avanzada con su SQL parametrizado y resultado (admin)**
 

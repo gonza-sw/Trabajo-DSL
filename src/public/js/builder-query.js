@@ -58,15 +58,20 @@ export function toggleGroupBy(state, field) {
 
 export function effectiveGroupBy(state) {
   if (!state.groupAuto) return state.groupBy;
-  if (!hasAggregate(state)) return [];
+  if (!hasAggregate(state) && !state.having) return []; // HAVING también vuelve agrupada la consulta
   return [...new Set(state.select.filter((s) => !s.aggregate).map((s) => s.field))];
 }
+
+// HAVING compara contra un número: sobre texto solo tiene sentido COUNT.
+export const havingAggregatesFor = (type) => (isNumericType(type) ? AGGREGATES : ['COUNT']);
 
 // Propuesta inicial de HAVING: la agregación que ya está en el SELECT; si no hay,
 // SUM del primer campo numérico que no sea un identificador.
 function defaultHaving(state) {
   const projected = state.select.find((s) => s.aggregate);
-  if (projected) return { aggregate: projected.aggregate, field: projected.field, operator: '>', value: '' };
+  if (projected && havingAggregatesFor(fieldType(state, projected.field)).includes(projected.aggregate)) {
+    return { aggregate: projected.aggregate, field: projected.field, operator: '>', value: '' };
+  }
   const fields = sourceFields(state);
   const numeric = fields.filter((f) => isNumericType(f.type));
   const measure = numeric.find((f) => !/(^|_)id$/.test(f.name)) ?? numeric[0] ?? fields[0];
@@ -80,8 +85,24 @@ export function setHaving(state, patch) {
   const next = { ...base, ...patch };
   const type = fieldType(state, next.field);
   if (type === null) return state;
-  if (!aggregatesFor(type).includes(next.aggregate)) next.aggregate = 'COUNT'; // p. ej. SUM sobre texto
+  if (!havingAggregatesFor(type).includes(next.aggregate)) next.aggregate = 'COUNT'; // p. ej. SUM o MIN sobre texto
   return { ...state, having: next };
+}
+
+// Mantiene el ORDER BY coherente cuando cambian las columnas: sigue el nuevo nombre si se
+// renombra una columna y descarta el orden si la columna deja de estar proyectada.
+export function reconcileOrder(prev, next) {
+  if (prev.select === next.select || !next.orderBy.length) return next;
+  const before = outputNames(prev);
+  const after = outputNames(next);
+  const sameColumns = before.length === after.length; // renombrado o cambio de agregación
+  const orderBy = [];
+  for (const o of next.orderBy) {
+    const i = before.indexOf(o.field);
+    if (sameColumns && i >= 0) orderBy.push({ ...o, field: after[i] });
+    else if (after.includes(o.field)) orderBy.push(o);
+  }
+  return { ...next, orderBy };
 }
 
 export function addOrder(state) {
@@ -120,7 +141,7 @@ export function validateState(state) {
   });
   visit(state.where);
 
-  if (!state.groupAuto && (hasAggregate(state) || state.groupBy.length)) {
+  if (!state.groupAuto && (hasAggregate(state) || state.having || state.groupBy.length)) {
     for (const s of state.select) {
       if (!s.aggregate && !state.groupBy.includes(s.field)) add('GROUP_MISMATCH', `${s.field} debe estar en GROUP BY`);
     }
@@ -150,9 +171,11 @@ function serializeGroup(state, group) {
 
 export function serializeQuery(state) {
   const names = outputNames(state);
-  const select = state.select.map((s, i) => (s.aggregate
-    ? { field: s.field, aggregate: s.aggregate, alias: names[i] }
-    : { field: s.field }));
+  const select = state.select.map((s, i) => {
+    if (s.aggregate) return { field: s.field, aggregate: s.aggregate, alias: names[i] };
+    // sin agregación, el alias se envía solo si renombra la columna (ORDER BY puede usarlo)
+    return names[i] === s.field ? { field: s.field } : { field: s.field, alias: names[i] };
+  });
   const having = state.having
     ? { field: state.having.field, aggregate: state.having.aggregate, operator: state.having.operator, value: coerce('number', state.having.value) }
     : null;
