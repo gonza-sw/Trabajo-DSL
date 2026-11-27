@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../src/app.js';
 import { hashPassword } from '../../src/security/auth.js';
+import { applyRolePolicy } from '../../src/security/role-policy.js';
 
 let app;
 let users;
@@ -23,6 +24,7 @@ beforeAll(async () => {
     ] }),
     queryService: { execute: async (query, user) => {
       calls.push({ query, user });
+      applyRolePolicy(query, user);
       return { success: true, sql: 'SELECT cantidad FROM v_inventario', params: [], columns: ['cantidad'], rows: [], rowCount: 0 };
     } },
     dashboardService: { getSummary: async (user) => ({ stockByWarehouse: [{ label: String(user.almacen_id ?? 'todos'), value: 0 }], stockByCategory: [] }) },
