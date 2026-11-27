@@ -104,25 +104,58 @@ Criterio de aceptación: A04. Pruebas: `selection.test.js` ("el rol consulta sol
 
 ## 4. Evidencias de ejecución
 
+### 4.1 Pruebas automáticas
+
 Comando: `npm run test:frontend` (Vitest + jsdom).
 
 ```
- ✓ tests/frontend/api.test.js (14 tests)
- ✓ tests/frontend/builder-query.test.js (21 tests)
- ✓ tests/frontend/dashboard.test.js (9 tests)
- ✓ tests/frontend/selection.test.js (14 tests)
- ✓ tests/frontend/integration-ui.test.js (7 tests)
- ✓ tests/frontend/results.test.js (13 tests)
+ api.test.js              14 pruebas
+ builder-query.test.js    23 pruebas
+ dashboard.test.js        10 pruebas
+ selection.test.js        14 pruebas
+ integration-ui.test.js    7 pruebas
+ results.test.js          13 pruebas
  Test Files  6 passed (6)
-      Tests  78 passed (78)
+      Tests  81 passed (81)
 ```
+
+Suite completa del proyecto (`npm test`, con los módulos de los cuatro integrantes): 165 pruebas aprobadas y 13 omitidas (las de PostgreSQL, que requieren `POSTGRES_URL`).
 
 | Área | Casos verificados |
 |---|---|
 | Selección | La fuente inicial es la primera del catálogo; cambiar de fuente conserva campos de igual nombre y tipo y limpia el resto; el rol consulta solo ve `v_inventario`; nombres de campo con HTML se muestran como texto. |
-| Constructor | JSON simple; reproducción exacta del ejemplo del contrato; números como número y texto como string; grupos vacíos descartados; profundidad 3 rechazada; SUM/AVG solo numéricos; GROUP BY automático y manual; HAVING; ORDER BY solo sobre campos proyectados; alias inválidos o reservados. |
+| Constructor | JSON simple; reproducción exacta del ejemplo del contrato; números como número y texto como string; grupos vacíos descartados; profundidad 3 rechazada; SUM/AVG solo numéricos; GROUP BY automático y manual; HAVING (propone la agregación proyectada); ORDER BY solo sobre campos proyectados; alias inválidos o reservados. |
 | Resultados | Tabla con datos, sin filas, carga, error HTTP; datos con HTML como texto; descarte de respuestas obsoletas; botón deshabilitado durante la carga. |
-| Dashboard | Series correctas a partir de `[{label,value}]`; barras y dona; cambio de sesión destruye y recrea los gráficos; estados vacío y de error; sin datos inventados. |
-| Interfaz completa | HTML real + cliente real con red simulada: sesión → esquema → consulta → dashboard; 401 redirige a login; salir; 403 y 500; `?mock=1` ya no activa nada. |
+| Dashboard | Series correctas a partir de `[{label,value}]`; barras y dona; colores según el tema; cambio de sesión destruye y recrea los gráficos; estados vacío y de error; sin datos inventados. |
+| Interfaz completa | HTML real + cliente real con red simulada: sesión → esquema → consulta → dashboard; 401 redirige a login; salir; 403 y 500; `?mock=1` no activa nada. |
 
-Pendiente para la integración (no verificado en este documento): capturas de pantalla con datos reales de la API y la base de demostración (guardar en `docs/images/`) y la prueba de aceptación A04 contra el backend real con las tres cuentas.
+### 4.2 Verificación con la API y la base de datos reales
+
+Entorno: `npm run seed` (5311 registros) y `npm start` en local, con las tres cuentas de demostración.
+
+| Cuenta | Comprobación en la interfaz | Resultado observado |
+|---|---|---|
+| admin | Consulta avanzada (2 niveles, HAVING, ORDER BY) | 5 filas; parámetros `[500,"Lima","Arequipa",0,100]` |
+| admin | Dashboard | 3 almacenes (Arequipa, Lima, Trujillo) y 5 categorías |
+| operario | Consulta de `almacen`, `almacen_id` | 200 filas; `WHERE (almacen_id = ?)` con `[1]` |
+| operario | Dashboard | Solo Lima |
+| consulta | Fuentes ofrecidas | Solo `v_inventario` |
+| consulta | Filtro con 2 niveles de subgrupos | 20 filas; filtro de almacén fuera del OR del usuario (`almacen_id = ?` con `2`) |
+| consulta | Dashboard | Solo Arequipa |
+| las tres | Cerrar sesión e ingresar con otra | El dashboard se vuelve a pedir y refleja el nuevo alcance |
+
+Con esto se cubren los criterios A01, A02 y A04 desde la interfaz. A03 (consulta inválida) se verifica en las pruebas automáticas de la interfaz.
+
+### 4.3 Capturas (datos reales)
+
+**Constructor: consulta avanzada con su SQL parametrizado y resultado (admin)**
+
+![Constructor visual con consulta avanzada](images/ui-constructor-consulta-avanzada.jpg)
+
+**Dashboard del rol admin**
+
+![Dashboard admin](images/ui-dashboard-admin.jpg)
+
+**Dashboard del rol operario (solo Lima)**
+
+![Dashboard operario](images/ui-dashboard-operario.jpg)
